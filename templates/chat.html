@@ -47,51 +47,83 @@
   </body>
 </html>-->
 <!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <title>CPL Chat</title>
-    <link rel="stylesheet" href="/static/chat.css" />
-    <style>
-      body { font-family: Arial, sans-serif; max-width: 900px; margin: 40px auto; }
-      textarea { width: 100%; height: 120px; }
-      pre { white-space: pre-wrap; padding: 12px; border: 1px solid #ddd; }
-    </style>
-  </head>
-  <body>
-    <h2>CPL Chat Demo</h2>
-    <p>Type a prompt and call Azure OpenAI through the Web App.</p>
-    <textarea id="msg" placeholder="Ask something..."></textarea>
-    <br/><br/>
-    <button id="send">Send</button>
-    <h3>Response</h3>
-    <pre id="out"></pre>
-    <script>
-      const conversationHistory = [];
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PLA Assistant · Northeastern CPS</title>
+  <link rel="stylesheet" href="/static/chat.css" />
+</head>
+<body>
 
-      document.getElementById("send").addEventListener("click", async () => {
-        const msg = document.getElementById("msg").value.trim();
-        const out = document.getElementById("out");
-        out.textContent = "Thinking...";
-        try {
-          const res = await fetch("/api/chat", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ message: msg, history: conversationHistory }),
-          });
-          const data = await res.json();
-          if (!res.ok) {
-            out.textContent = data.error || "Request failed";
-            return;
-          }
-          const answer = data.answer || "";
-          conversationHistory.push({ role: "user", content: msg });
-          conversationHistory.push({ role: "assistant", content: answer });
-          out.textContent = answer;
-        } catch (e) {
-          out.textContent = "Network error";
-        }
+  <div id="header">
+    PLA Assistant <span>Northeastern University · College of Professional Studies</span>
+  </div>
+
+  <div id="messages">
+    <div id="typing">Thinking…</div>
+  </div>
+
+  <div id="input-bar">
+    <textarea id="msg" placeholder="Type your message…" rows="1"></textarea>
+    <button id="send">Send</button>
+  </div>
+
+<script>
+  const msgsEl   = document.getElementById('messages');
+  const typingEl = document.getElementById('typing');
+  const msgEl    = document.getElementById('msg');
+  const sendEl   = document.getElementById('send');
+
+  const conversationHistory = [];
+  let busy = false;
+
+  msgEl.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
+  });
+
+  sendEl.addEventListener('click', handleSend);
+
+  async function handleSend() {
+    const text = msgEl.value.trim();
+    if (!text || busy) return;
+    addMsg('user', text);
+    msgEl.value = '';
+    setBusy(true);
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text, history: conversationHistory }),
       });
-    </script>
-  </body>
+      const data = await res.json();
+      const answer = res.ok ? (data.answer || '') : (data.error || 'Request failed');
+      conversationHistory.push({ role: 'user', content: text });
+      conversationHistory.push({ role: 'assistant', content: answer });
+      addMsg('bot', answer);
+    } catch (e) {
+      addMsg('bot', 'Network error — please try again.');
+    }
+    setBusy(false);
+    msgEl.focus();
+  }
+
+  function addMsg(role, text) {
+    typingEl.style.display = 'none';
+    const d = document.createElement('div');
+    d.className = role === 'bot' ? 'msg-bot' : 'msg-user';
+    d.textContent = text;
+    msgsEl.insertBefore(d, typingEl);
+    msgsEl.scrollTop = msgsEl.scrollHeight;
+  }
+
+  function setBusy(v) {
+    busy = v;
+    sendEl.disabled = v;
+    msgEl.disabled  = v;
+    typingEl.style.display = v ? 'block' : 'none';
+    if (v) msgsEl.scrollTop = msgsEl.scrollHeight;
+  }
+</script>
+</body>
 </html>
