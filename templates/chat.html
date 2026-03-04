@@ -70,19 +70,19 @@
   </div>
 
 <script>
-  const msgsEl   = document.getElementById('messages');
-  const typingEl = document.getElementById('typing');
-  const msgEl    = document.getElementById('msg');
+  const msgsEl   = document.getElementById('messages'); //chat bubbles
+  const typingEl = document.getElementById('typing'); 
+  const msgEl    = document.getElementById('msg'); //message
   const sendEl   = document.getElementById('send');
 
-  const conversationHistory = [];
-  let busy = false;
+  const conversationHistory = [];//setting up memory
+  let busy = false; //checking if the app is currently waiting for a response
 
   msgEl.addEventListener('keydown', e => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
-  });
+  });//send if hit enter 
 
-  sendEl.addEventListener('click', handleSend);
+  sendEl.addEventListener('click', handleSend);//send if the send button is hit
 
   async function handleSend() {
     const text = msgEl.value.trim();
