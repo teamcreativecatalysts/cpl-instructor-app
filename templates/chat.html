@@ -69,7 +69,8 @@
     <button id="send">Send</button>
   </div>
 
-<script>
+<script> 
+  //reaches into HTML and references to the elements that are interactive
   const msgsEl   = document.getElementById('messages'); //chat bubbles
   const typingEl = document.getElementById('typing'); 
   const msgEl    = document.getElementById('msg'); //message
@@ -84,12 +85,14 @@
 
   sendEl.addEventListener('click', handleSend);//send if the send button is hit
 
+  //main send function 
   async function handleSend() {
     const text = msgEl.value.trim();
     if (!text || busy) return;
     addMsg('user', text);
     msgEl.value = '';
     setBusy(true);
+    //calling the backend by talking to Flask
     try {
       const res = await fetch('/api/chat', {
         method: 'POST',
@@ -98,6 +101,7 @@
       });
       const data = await res.json();
       const answer = res.ok ? (data.answer || '') : (data.error || 'Request failed');
+      //memory updates and displays the responses
       conversationHistory.push({ role: 'user', content: text });
       conversationHistory.push({ role: 'assistant', content: answer });
       addMsg('bot', answer);
@@ -107,7 +111,7 @@
     setBusy(false);
     msgEl.focus();
   }
-
+//interact with the div in css for the "thinking" while the response comes
   function addMsg(role, text) {
     typingEl.style.display = 'none';
     const d = document.createElement('div');
@@ -116,7 +120,7 @@
     msgsEl.insertBefore(d, typingEl);
     msgsEl.scrollTop = msgsEl.scrollHeight;
   }
-
+//locking and unlocking the UI depending on the user can type again
   function setBusy(v) {
     busy = v;
     sendEl.disabled = v;
