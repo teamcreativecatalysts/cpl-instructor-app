@@ -156,7 +156,7 @@ def api_chat():
             messages=[
                 {"role": "system", "content": "You are the assistant for gathering information for Credit for Prior Learning at Northeastern University"},
             ] + safe_history + [
-                {"role": "user", "content": user_message},  # ← uncommented!
+                {"role": "user", "content": user_message}, 
             ],
             temperature=0.3,
         )
