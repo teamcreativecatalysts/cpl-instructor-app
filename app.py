@@ -139,15 +139,35 @@ def api_chat():
         client, err = get_client()
         if err:
             return jsonify({"error": err}), 500
+            
+        history = data.get("history") or []
+
+        # Sanitise — only keep valid role/content pairs
+        safe_history = [
+            {"role": h["role"], "content": h["content"]}
+            for h in history
+            if isinstance(h, dict)
+            and h.get("role") in ("user", "assistant")
+            and isinstance(h.get("content"), str)
+        ]
 
         response = client.chat.completions.create(
             model=deployment,
             messages=[
-                {"role": "system", "content": "You are a helpful assistant for the CPL course."},
-                {"role": "user", "content": user_message},
+                {"role": "system", "content": "You are the assistant for gathering information for Credit for Prior Learning at Northeastern University"},
+            ] + safe_history + [
+                {"role": "user", "content": user_message},  # ← uncommented!
             ],
             temperature=0.3,
         )
+       # response = client.chat.completions.create(
+         #   model=deployment,
+           # messages=[
+              #  {"role": "system", "content": "You are the assistant for gathering information for Credit for Prior Learning at Northeastern University"},
+                #{"role": "user", "content": user_message},
+           # ],
+         #   temperature=0.3,
+      #  )
 
         answer = (response.choices[0].message.content or "").strip()
 
