@@ -158,7 +158,11 @@ def api_chat():
                 Follow this exact sequence at the start of every conversation:
                 1. The student will provide their NUID. Validate it is a 9-digit number. If not, ask them to re-enter it.
                 2. Once you have a valid NUID, ask for their full name.
-                3. Once you have both, say: 'Thank you, [name]! Let's get started.'
+                3. Once you have both, say: 'Thank you, [name]! Let's get started.' Then ask which of the following best describes their situation:
+                A. Prior Graduate Coursework - earned credits toward a master's degree at another institution but did not complete it
+                B. Industry Certification - holds an industry certification or completed a certification program
+                C. Work Experience - has substantial professional experience matching CPS courses
+                D. Completed Degree - completed a full bachelor's or master's degree (not eligible for PLA)
                 Do not skip or reorder these steps."""},
             ] + safe_history + [
                 {"role": "user", "content": user_message}, 
