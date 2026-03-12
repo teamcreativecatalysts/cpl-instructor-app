@@ -1,15 +1,64 @@
 import os
 from flask import Flask, render_template, request, jsonify, send_from_directory
 from openai import AzureOpenAI
-
-# NEW: DB test imports
+import json
+from pathlib import Path
 import pyodbc
 
 
 # Explicit template folder for Azure App Service reliability
 app = Flask(__name__, template_folder="templates")
 
+# ADDED — loads both data files at startup:
+BASE_DIR = Path(__file__).resolve().parent
+ 
+try:
+    POLICY_DIGEST = (BASE_DIR / "data" / "policy_digest.md").read_text(encoding="utf-8")
+except Exception as e:
+    POLICY_DIGEST = "Policy digest unavailable."
+    app.logger.warning(f"Could not load policy_digest.md: {e}")
+ 
+try:
+    INTERVIEW_SCHEMA = json.loads((BASE_DIR / "data" / "interview_schema.json").read_text(encoding="utf-8"))
+except Exception as e:
+    INTERVIEW_SCHEMA = {}
+    app.logger.warning(f"Could not load interview_schema.json: {e}")
 
+
+#Build system prompt
+def build_system_prompt():
+    return f"""
+You are a PLA (Prior Learning Assessment) intake assistant for Northeastern University College of Professional Studies.
+Your job is to run a structured interview and collect evidence for human evaluation.
+ 
+NON-NEGOTIABLE RULES:
+- Ask ONE question at a time. Do not overwhelm the student with multiple questions.
+- Follow the interview flow exactly. Do not skip or reorder steps.
+- Do NOT approve or deny credit. You only collect information and prepare a case file for evaluators.
+- Only use the policy digest below as your source of truth. If something is not covered, say you are unsure and advise them to contact their advisor.
+- Be warm, professional, and encouraging throughout.
+ 
+INTERVIEW FLOW:
+1. Ask for the student's NUID (9-digit number). Validate it is exactly 9 digits. If not, ask them to re-enter it.
+2. Ask for their full name.
+3. Once you have both NUID and name, greet them by name and ask which scenario applies:
+   A. Prior Graduate Coursework — earned credits toward a master's degree at another institution but did not complete it
+   B. Industry Certification — holds an industry certification or completed a certification program
+   C. Work Experience — has substantial professional experience matching CPS courses
+   D. Completed Degree — completed a full bachelor's or master's degree elsewhere (this option is NOT eligible)
+4. If they select D (Completed Degree), inform them they are not eligible and direct them to their advisor.
+5. For scenarios A, B, or C, follow the matching question flow from the policy digest to collect all required information.
+6. Once all information is collected, produce:
+   (a) A document checklist showing what they still need to gather
+   (b) A brief evaluator-ready summary of their case
+   (c) Any risk flags or items that need human review
+ 
+POLICY DIGEST:
+{POLICY_DIGEST}
+ 
+DATA TO COLLECT (JSON schema keys):
+{json.dumps(INTERVIEW_SCHEMA, indent=2)}
+""".strip()
 # ===============================
 # Azure OpenAI Client Factory
 # ===============================
@@ -118,7 +167,33 @@ def dbcheck():
             "error": f"DB check failed: {type(e).__name__}",
             "details": str(e),
         }), 500
-
+        
+# DB Save Helper (safe — won't crash if DB not ready)
+# ===============================
+def save_session_to_db(nuid, student_name, scenario, conversation_log):
+    conn_str = os.getenv("SQL_CONNECTION_STRING")
+    if not conn_str:
+        app.logger.warning("SQL_CONNECTION_STRING not set — skipping DB save.")
+        return
+ 
+    try:
+        conn = pyodbc.connect(conn_str, timeout=10)
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            INSERT INTO pla_sessions (nuid, student_name, scenario, conversation_log)
+            VALUES (?, ?, ?, ?)
+            """,
+            nuid,
+            student_name,
+            scenario,
+            json.dumps(conversation_log),
+        )
+        conn.commit()
+        conn.close()
+        app.logger.info(f"Session saved for NUID: {nuid}")
+    except Exception as e:
+        app.logger.exception(f"DB save failed (non-fatal): {e}")
 
 # ===============================
 # Chat API Endpoint
@@ -154,22 +229,26 @@ def api_chat():
         response = client.chat.completions.create(
             model=deployment,
             messages=[
-                {"role": "system", "content": "You are the assistant for gathering information for Credit for Prior Learning at Northeastern University"},
+                {"role": "system", "content": build_system_prompt()},
             ] + safe_history + [
                 {"role": "user", "content": user_message}, 
             ],
             temperature=0.3,
         )
-         #   model=deployment,
-           # messages=[
-              #  {"role": "system", "content": "You are the assistant for gathering information for Credit for Prior Learning at Northeastern University"},
-                #{"role": "user", "content": user_message},
-           # ],
-         #   temperature=0.3,
-      #  )
 
         answer = (response.choices[0].message.content or "").strip()
-
+        # Attempt to extract nuid/name/scenario from the session metadata if provided
+        session_meta = data.get("session_meta") or {}
+        nuid = session_meta.get("nuid")
+        student_name = session_meta.get("student_name")
+        scenario = session_meta.get("scenario")
+ 
+        if nuid and student_name:
+            full_history = safe_history + [
+                {"role": "user", "content": user_message},
+                {"role": "assistant", "content": answer},
+            ]
+            save_session_to_db(nuid, student_name, scenario, full_history)
         return jsonify({"answer": answer})
 
     except Exception as e:
