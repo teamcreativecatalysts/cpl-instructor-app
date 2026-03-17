@@ -46,36 +46,22 @@ PLA (Prior Learning Assessment) allows students to earn transfer credit for coll
 ### Scenario 1 — Prior Graduate Coursework
 - Official transcript from prior institution (course names, grades, credit hours)
 - Course syllabus for each course being claimed (learning objectives and content)
-- Current résumé
-- Completed PLA Request Form
+- Current Resume
 
 ### Scenario 2 — Industry Certification
 - Official certification credential, certificate, or digital badge
-- Current résumé
+- Current Resume
 - Course syllabus or outline from the certification program
 - Transcript (only if formal coursework was completed as part of the certification)
-- Completed PLA Request Form
 
 ### Scenario 3 — Work Experience
 - Current résumé with detailed job descriptions
 - HR statement confirming job title, responsibilities, and length of employment
 - Written portfolio narrative connecting work experience to each course's learning objectives
-- Work samples or project artifacts demonstrating mastery (may be redacted if confidential)
+- Work samples or project artifacts demonstrating mastery
 - Reference contact information (name, title, email/phone)
 - Documentation of any relevant workplace training or professional development
-- Completed PLA Request Form
 
----
-
-## Portfolio Narrative Requirements (Scenario 3)
-The portfolio narrative must:
-1. Address each weekly topic and learning outcome listed in the course syllabus
-2. Explain how job experience demonstrates mastery of those specific outcomes
-3. Include examples of reflection, revision, and application of lessons learned
-4. Describe any supervisory or peer review process that improved skills
-5. Reference specific artifacts and explain how each was created or revised
-
----
 
 ## Contact
 **Office of Academic & Student Support Services**
