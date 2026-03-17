@@ -52,7 +52,6 @@ INTERVIEW FLOW:
 6. Once all information is collected, produce:
    (a) A document checklist showing what they still need to gather
    (b) A brief evaluator-ready summary of their case
-   (c) Any risk flags or items that need human review
    Always put information collected on its own line with a blank line between them.
 IMPORTANT: Each step in the interview flow above = exactly one message from you. 
 One step. One question. One send. Never bundle steps together.
