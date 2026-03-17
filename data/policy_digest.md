@@ -63,7 +63,7 @@ A student who earned a completed bachelor's or master's degree at another instit
 |---|------------------|
 | 1 | Official transcript from the prior institution (showing course names, grades, and credit hours) |
 | 2 | Course syllabus for each course being claimed (showing learning objectives and content) |
-| 3 | Current résumé |
+| 3 | Current resume |
  
 > If claiming multiple courses, a separate syllabus is required for each course.
  
@@ -72,7 +72,7 @@ A student who earned a completed bachelor's or master's degree at another instit
 | # | Required Document |
 |---|------------------|
 | 1 | Official industry certification credential, certificate, or digital badge |
-| 2 | Current résumé |
+| 2 | Current resume |
 | 3 | Transcript (only if formal coursework was completed as part of the certification) |
 | 4 | Course syllabus or outline from the certification program (showing topics and learning outcomes) |
  
@@ -82,7 +82,7 @@ A student who earned a completed bachelor's or master's degree at another instit
  
 | # | Required Document |
 |---|------------------|
-| 1 | Current résumé with detailed job descriptions for each relevant role |
+| 1 | Current resume with detailed job descriptions for each relevant role |
 | 2 | HR statement confirming job title, responsibilities, and length of employment |
 | 3 | Written portfolio narrative connecting work experience to each course's learning objectives |
 | 4 | Work samples or project artifacts demonstrating mastery (may be redacted if confidential) |
