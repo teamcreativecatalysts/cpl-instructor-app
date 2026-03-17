@@ -1,14 +1,14 @@
 # PLA / CPL Policy Digest
 ### Northeastern University — College of Professional Studies (CPS)
-> **Purpose:** This file is the authoritative policy reference for the PLA intake chatbot. It defines eligibility rules, scenario routing logic, required documents, approval workflows, credit limits, and FAQ responses. The chatbot must consult this digest when answering any student question about Prior Learning Assessment (PLA) or Credit for Prior Learning (CPL).
+> Purpose: This file is the authoritative policy reference for the PLA intake chatbot. It defines eligibility rules, scenario routing logic, required documents, approval workflows, credit limits, and FAQ responses. The chatbot must consult this digest when answering any student question about Prior Learning Assessment (PLA) or Credit for Prior Learning (CPL).
  
 ---
  
 ## 1. What Is PLA?
  
-**Prior Learning Assessment (PLA)** is the process by which a student's experiential learning — acquired outside a traditional academic environment — is assessed and evaluated for purposes of granting college credit. CPS refers to this as PLA; it is treated as transfer credit on the official transcript once approved.
+Prior Learning Assessment (PLA) is the process by which a student's experiential learning — acquired outside a traditional academic environment — is assessed and evaluated for purposes of granting college credit. CPS refers to this as PLA; it is treated as transfer credit on the official transcript once approved.
  
-PLA at CPS is grounded in the **Ten Standards of Assessment from the Council for Adult and Experiential Learning (CAEL)** and has been reviewed by the **New England Commission of Higher Education (NECHE)**, Northeastern's regional accrediting body.
+PLA at CPS is grounded in the Ten Standards of Assessment from the Council for Adult and Experiential Learning (CAEL) and has been reviewed by the New England Commission of Higher Education (NECHE), Northeastern's regional accrediting body.
  
 **Core principle:** Credit is awarded only for *learning*, not experience alone. The learning must be college-level, demonstrate a balance of theory and practical application, and be verified by subject matter experts.
  
@@ -16,7 +16,7 @@ PLA at CPS is grounded in the **Ten Standards of Assessment from the Council for
  
 ## 2. Eligibility — Who Qualifies?
  
-CPS recognizes **three eligible PLA pathways** and **one ineligible scenario**:
+CPS recognizes three eligible PLA pathways** and **one ineligible scenario:
  
 | Scenario | Label | Eligibility |
 |----------|-------|-------------|
@@ -26,20 +26,20 @@ CPS recognizes **three eligible PLA pathways** and **one ineligible scenario**:
 | 4 | Completed Bachelor's or Master's Degree | ❌ Not Eligible |
  
 ### Scenario 1 — Prior Graduate Coursework
-A student who earned credits toward a **master's degree at another institution but withdrew before a diploma was awarded**. Courses must match ITC or ALY curriculum at CPS.
+A student who earned credits toward a master's degree at another institution but withdrew before a diploma was awarded. Courses must match ITC or ALY curriculum at CPS.
  
 ### Scenario 2 — Industry Certification
-A student who holds an **industry certification or completed a certification program** (e.g., CompTIA, AWS, PMP, Microsoft) that is *not* toward a bachelor's or master's degree.
+A student who holds an industry certification or completed a certification program (e.g., CompTIA, AWS, PMP, Microsoft) that is *not* toward a bachelor's or master's degree.
  
 ### Scenario 3 — Substantial Work Experience
-A student who has **substantial professional experience** in a knowledge/skill area that matches CPS ITC or ALY courses. This pathway requires a written portfolio narrative and a faculty review meeting.
+A student who has substantial professional experience in a knowledge/skill area that matches CPS ITC or ALY courses. This pathway requires a written portfolio narrative and a faculty review meeting.
  
 ### Scenario 4 — Not Eligible
-A student who earned a **completed bachelor's or master's degree** at another institution and wants to claim PLA credit using courses that were part of that completed degree. CPS does not award PLA credit for courses used to earn a previously completed degree.
+A student who earned a completed bachelor's or master's degree at another institution and wants to claim PLA credit using courses that were part of that completed degree. CPS does not award PLA credit for courses used to earn a previously completed degree.
  
-> **Chatbot response for ineligible students:** "CPS does not award PLA credit for courses that were used to earn a previously completed bachelor's or master's degree. PLA is designed for learning beyond a completed degree. Please contact your academic advisor for guidance."
+> Chatbot response for ineligible students: "CPS does not award PLA credit for courses that were used to earn a previously completed bachelor's or master's degree. PLA is designed for learning beyond a completed degree. Please contact your academic advisor for guidance."
 >
-> **Contact:** Office of Academic & Student Support Services | 617.373.2400 | 50 Nightingale Hall
+> Contact: Office of Academic & Student Support Services | 617.373.2400 | 50 Nightingale Hall
  
 ---
  
@@ -47,11 +47,11 @@ A student who earned a **completed bachelor's or master's degree** at another in
  
 | Rule | Limit |
 |------|-------|
-| Maximum PLA credits total | **12 credits** |
-| Transfer credit cap for master's degree | **Cannot exceed 25% of total credit hours required** |
-| Transfer credit cap for graduate certificates | **Equivalent of one course only** |
+| Maximum PLA credits total | 12 credits |
+| Transfer credit cap for master's degree | Cannot exceed 25% of total credit hours required |
+| Transfer credit cap for graduate certificates | Equivalent of one course only |
  
-> CPS does **not** award general ALY/ITC credit for anything that is not one of its named courses — but reviewers are flexible in interpreting what a course is "about." A single industry certification may qualify for credit across several courses.
+> CPS does not award general ALY/ITC credit for anything that is not one of its named courses but reviewers are flexible in interpreting what a course is "about." A single industry certification may qualify for credit across several courses.
  
 ---
  
@@ -89,29 +89,15 @@ A student who earned a **completed bachelor's or master's degree** at another in
 | 5 | Reference contact information (name, title, email/phone) for Program Lead to contact |
 | 6 | Documentation of any relevant workplace training or professional development |
  
-> **Self-employed students:** May substitute client contracts, invoices, or a professional portfolio in place of an HR letter.
+> Self-employed students: May substitute client contracts, invoices, or a professional portfolio in place of an HR letter.
 >
-> **Confidential work samples:** Samples may be redacted or anonymized. What matters is that they demonstrate skills and competencies.
+> Confidential work samples: Samples may be redacted or anonymized. What matters is that they demonstrate skills and competencies.
  
 ---
  
-## 5. FAQ — Standard Chatbot Responses
+
  
-| Question | Response |
-|----------|----------|
-| **What is the maximum PLA credit I can earn?** | CPS allows up to 12 PLA credits total. For master's degrees, transfer credit cannot exceed 25% of required credit hours. For graduate certificates, only one course equivalent is accepted. |
-| **Can I claim PLA for more than one course at once?** | Yes. Submit all course requests together in a single application. Be sure to include the syllabus for each course you are claiming. |
-| **How is PLA credit shown on my transcript?** | Approved PLA credit is recorded as transfer credit on your official transcript. The Registrar's Office applies it after the advisor enters the approval in Salesforce. |
-| **How long does the review process take?** | Allow 2–3 weeks from the time you submit all required documents. Complex or multi-course requests may take additional time. |
-| **What happens if my PLA request is denied?** | Your advisor will notify you with an explanation. You may appeal by providing additional documentation, revising your portfolio narrative, or resubmitting with supplemental evidence. |
-| **Does my certification need to be current?** | A current, active certification is preferred. Expired certifications may still be reviewed, but certifications that are still in progress will generally not qualify until completed. |
-| **What if I don't have work samples?** | Detailed narrative descriptions of work are acceptable, especially when supported by an HR letter and professional references. |
-| **What if I'm self-employed?** | Self-employed individuals may provide alternative verification such as client contracts, invoices, or a professional portfolio in place of an HR letter. |
-| **What CPS programs are eligible for PLA?** | PLA is primarily available for courses in the Information Technology (ITC) and Analytics / Data Science (ALY) curricula. If you're unsure whether your experience matches, your advisor can help identify a fit. |
- 
----
- 
-## 6. Governing Standards — CAEL Ten Standards of Assessment
+## 5. Governing Standards — CAEL Ten Standards of Assessment
  
 CPS PLA policy is grounded in the **CAEL Ten Standards of Assessment**:
  
@@ -128,13 +114,9 @@ CPS PLA policy is grounded in the **CAEL Ten Standards of Assessment**:
  
 ---
  
-## 7. Contact Information
+## 6. Contact Information
  
-**Office of Academic & Student Support Services**
+Office of Academic & Student Support Services
 50 Nightingale Hall | 360 Huntington Avenue | Boston, MA 02115
 Tel: 617.373.2400 | Fax: 617.373.5545 | northeastern.edu/cps
 
-## Contact
-**Office of Academic & Student Support Services**
-50 Nightingale Hall | 360 Huntington Avenue | Boston, MA 02115
-Tel: 617.373.2400 | Fax: 617.373.5545 | northeastern.edu/cps
