@@ -19,3 +19,4 @@ jobs:
           app-name: teamcreativecatalysts-app
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE }}
           package: .
+          enable-oryx-build: true
