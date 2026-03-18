@@ -14,9 +14,8 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Deploy to Azure Web App
-        uses: azure/webapps-deploy@v3
+        uses: azure/webapps-deploy@v2
         with:
           app-name: teamcreativecatalysts-app
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE }}
           package: .
-          enable-oryx-build: true
