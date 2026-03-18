@@ -43,17 +43,24 @@ A student who earned a completed bachelor's or master's degree at another instit
  
 ---
  
-## 3. Credit Limits (All Scenarios)
- 
-| Rule | Limit |
-|------|-------|
-| Maximum PLA credits total | 12 credits |
-| Transfer credit cap for master's degree | Cannot exceed 25% of total credit hours required |
-| Transfer credit cap for graduate certificates | Equivalent of one course only |
- 
-> CPS does not award general ALY/ITC credit for anything that is not one of its named courses but reviewers are flexible in interpreting what a course is "about." A single industry certification may qualify for credit across several courses.
- 
----
+##3 Required Information from Student (All Scenarios)
+Every student must provide the following during the chatbot intake, regardless of scenario:
+##Course and Credit Request
+1. Specific CPS course(s) the student is requesting credit for, identified by course code and name (Examples: ITC 1000 – Computer Applications, ALY 6010 – Correlation and Regression Analysis)
+2. Number of credits being requested for each course
+3. Students must specify credits per course, not just a total
+4. If the student is unsure of the exact course code, they should describe the subject area and an advisor will help identify the match
+
+##Program area the course belongs to:
+ALY (Analytics / Data Science)
+ITC (Information Technology)
+Other / Not sure (advisor will assist)
+
+##Chatbot Must Collect (before closing the intake)
+1. Full list of CPS courses being claimed (course code + name if known)
+2. Number of credits requested per course
+3. Running total of credits requested — must not exceed 12
+4. Confirmation that the student understands credits are awarded as transfer credit on the transcript, not as a letter grade
  
 ## 4. Required Documents by Scenario
  
