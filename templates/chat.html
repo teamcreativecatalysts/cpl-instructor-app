@@ -115,7 +115,7 @@
 
     setBusy(false);
     e.target.value = '';
-  });   // ← semicolon goes here, right after the closing parenthesis
+  }); 
 
   const UPLOAD_TRIGGERS = [
     'transcript', 'resume', 'résumé', 'syllabus', 'syllabi',
@@ -130,7 +130,9 @@
     document.getElementById('upload-btn').style.display = shouldShow ? 'flex' : 'none';
   }
 
+  document.addEventListener('DOMContentLoaded', () => {
   addMsg('bot', 'Hello! Welcome to the Northeastern CPS Prior Learning Assessment assistant. To get started, please enter your NUID (your 9-digit Northeastern University ID number).');
+});
 </body>
 </html>
  
