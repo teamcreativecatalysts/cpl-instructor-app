@@ -1,51 +1,4 @@
-<!--<!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <title>CPL Chat</title>
-    <style>
-      body { font-family: Arial, sans-serif; max-width: 900px; margin: 40px auto; }
-      textarea { width: 100%; height: 120px; }
-      pre { white-space: pre-wrap; padding: 12px; border: 1px solid #ddd; }
-    </style>
-  </head>
-  <body>
-    <h2>CPL Chat Demo</h2>
-    <p>Type a prompt and call Azure OpenAI through the Web App.</p>
 
-    <textarea id="msg" placeholder="Ask something..."></textarea>
-    <br/><br/>
-    <button id="send">Send</button>
-
-    <h3>Response</h3>
-    <pre id="out"></pre>
-
-    <script>
-      document.getElementById("send").addEventListener("click", async () => {
-      const msg = document.getElementById("msg").value.trim();
-      const out = document.getElementById("out");
-      out.textContent = "Thinking...";
-
-      try {
-        const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: msg }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        out.textContent = data.error || "Request failed";
-        return;
-      }
-      out.textContent = data.answer || "";
-    } catch (e) {
-      out.textContent = "Network error";
-    }
-  });
-    </script>
-  </body>
-</html>-->
 <!doctype html>
 <html lang="en">
 <head>
@@ -65,6 +18,10 @@
   </div>
 
   <div id="input-bar">
+     <label id="upload-btn" title="Attach a file">
+      📎
+      <input type="file" id="file-input" accept=".pdf,.png,.jpg,.jpeg" />
+    </label>
     <textarea id="msg" placeholder="Type your message…" rows="1"></textarea>
     <button id="send">Send</button>
   </div>
@@ -121,14 +78,48 @@
     msgsEl.scrollTop = msgsEl.scrollHeight;
   }
 //locking and unlocking the UI depending on the user can type again
-  function setBusy(v) {
+ function setBusy(v) {
     busy = v;
     sendEl.disabled = v;
     msgEl.disabled  = v;
+    // ✅ ADDED: also disable the upload button while busy
+    document.getElementById('file-input').disabled = v;
+    // ✅ END ADDED
     typingEl.style.display = v ? 'block' : 'none';
     if (v) msgsEl.scrollTop = msgsEl.scrollHeight;
   }
-addMsg('bot', 'Hello! Welcome to the Northeastern CPS Prior Learning Assessment assistant. To get started, please enter your NUID (your 9-digit Northeastern University ID number).');
+ 
+  //file upload handler
+  document.getElementById('file-input').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+ 
+    addMsg('user', `📎 ${file.name}`);
+    setBusy(true);
+ 
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('history', JSON.stringify(conversationHistory));
+    formData.append('label', file.name);
+ 
+    try {
+      const res = await fetch('/api/upload', { method: 'POST', body: formData });
+      const data = await res.json();
+      const answer = res.ok ? (data.answer || '') : (data.error || 'Upload failed');
+ 
+      conversationHistory.push({ role: 'user', content: `[Uploaded file: ${file.name}]` });
+      conversationHistory.push({ role: 'assistant', content: answer });
+      addMsg('bot', answer);
+    } catch {
+      addMsg('bot', 'Network error — could not upload file.');
+    }
+ 
+    setBusy(false);
+    e.target.value = ''; // reset so the same file can be re-uploaded if needed
+  });
+ 
+  addMsg('bot', 'Hello! Welcome to the Northeastern CPS Prior Learning Assessment assistant. To get started, please enter your NUID (your 9-digit Northeastern University ID number).');
 </script>
 </body>
 </html>
+ 
