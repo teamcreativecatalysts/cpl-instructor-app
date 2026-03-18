@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html lang="en">
 <head>
@@ -18,7 +17,7 @@
   </div>
 
   <div id="input-bar">
-     <label id="upload-btn" title="Attach a file" style="display:none">
+     <label id="upload-btn" title="Attach a file">
       📎
       <input type="file" id="file-input" accept=".pdf,.png,.jpg,.jpeg" />
     </label>
@@ -62,7 +61,6 @@
       conversationHistory.push({ role: 'user', content: text });
       conversationHistory.push({ role: 'assistant', content: answer });
       addMsg('bot', answer);
-      checkForUploadTrigger(answer);
     } catch (e) {
       addMsg('bot', 'Network error — please try again.');
     }
@@ -83,56 +81,44 @@
     busy = v;
     sendEl.disabled = v;
     msgEl.disabled  = v;
+    // ✅ ADDED: also disable the upload button while busy
     document.getElementById('file-input').disabled = v;
+    // ✅ END ADDED
     typingEl.style.display = v ? 'block' : 'none';
     if (v) msgsEl.scrollTop = msgsEl.scrollHeight;
   }
  
-//file upload handler
+  //file upload handler
   document.getElementById('file-input').addEventListener('change', async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-
+ 
     addMsg('user', `📎 ${file.name}`);
     setBusy(true);
-
+ 
     const formData = new FormData();
     formData.append('file', file);
     formData.append('history', JSON.stringify(conversationHistory));
     formData.append('label', file.name);
-
+ 
     try {
       const res = await fetch('/api/upload', { method: 'POST', body: formData });
       const data = await res.json();
       const answer = res.ok ? (data.answer || '') : (data.error || 'Upload failed');
-
+ 
       conversationHistory.push({ role: 'user', content: `[Uploaded file: ${file.name}]` });
       conversationHistory.push({ role: 'assistant', content: answer });
       addMsg('bot', answer);
     } catch {
       addMsg('bot', 'Network error — could not upload file.');
     }
-
+ 
     setBusy(false);
-    e.target.value = '';
-  }); 
-
-  const UPLOAD_TRIGGERS = [
-    'transcript', 'resume', 'résumé', 'syllabus', 'syllabi',
-    'certification', 'certificate', 'badge', 'hr statement',
-    'hr letter', 'work sample', 'portfolio', 'upload', 'attach',
-    'submit', 'provide your', 'do you have your'
-  ];
-
-  function checkForUploadTrigger(botText) {
-    const lower = botText.toLowerCase();
-    const shouldShow = UPLOAD_TRIGGERS.some(word => lower.includes(word));
-    document.getElementById('upload-btn').style.display = shouldShow ? 'flex' : 'none';
-  }
-
-  document.addEventListener('DOMContentLoaded', () => {
+    e.target.value = ''; // reset so the same file can be re-uploaded if needed
+  });
+ 
   addMsg('bot', 'Hello! Welcome to the Northeastern CPS Prior Learning Assessment assistant. To get started, please enter your NUID (your 9-digit Northeastern University ID number).');
-});
+</script>
 </body>
 </html>
  
