@@ -23,7 +23,12 @@ try:
 except Exception as e:
     INTERVIEW_SCHEMA = {}
     app.logger.warning(f"Could not load interview_schema.json: {e}")
-
+ 
+try:
+    FEW_SHOT_EXAMPLES = (BASE_DIR / "data" / "few_shot_examples.md").read_text(encoding="utf-8")
+except Exception as e:
+    FEW_SHOT_EXAMPLES = "Few-shot examples unavailable."
+    app.logger.warning(f"Could not load few_shot_examples.md: {e}")
 
 #Build system prompt
 def build_system_prompt():
@@ -84,6 +89,7 @@ INTERVIEW FLOW:
 IMPORTANT: Each step = exactly one message from you. One step. One question. One send.
 POLICY DIGEST:
 {POLICY_DIGEST}
+{FEW_SHOT_EXAMPLES}
  
 DATA TO COLLECT (JSON schema keys):
 {json.dumps(INTERVIEW_SCHEMA, indent=2)}
