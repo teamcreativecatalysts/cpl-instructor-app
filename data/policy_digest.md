@@ -20,21 +20,21 @@ CPS recognizes three eligible PLA pathways** and **one ineligible scenario:
  
 | Scenario | Label | Eligibility |
 |----------|-------|-------------|
-| 1 | Prior Graduate Coursework (Incomplete Degree) | ✅ Eligible |
-| 2 | Industry Certification or Certification Program | ✅ Eligible |
-| 3 | Substantial Work Experience | ✅ Eligible |
-| 4 | Completed Bachelor's or Master's Degree | ❌ Not Eligible |
+| A | Prior Graduate Coursework (Incomplete Degree) | ✅ Eligible |
+| B | Industry Certification or Certification Program | ✅ Eligible |
+| C | Substantial Work Experience | ✅ Eligible |
+| D | Completed Bachelor's or Master's Degree | ❌ Not Eligible |
  
-### Scenario 1 — Prior Graduate Coursework
+### Scenario A — Prior Graduate Coursework
 A student who earned credits toward a master's degree at another institution but withdrew before a diploma was awarded. Courses must match ITC or ALY curriculum at CPS.
  
-### Scenario 2 — Industry Certification
+### Scenario B — Industry Certification
 A student who holds an industry certification or completed a certification program (e.g., CompTIA, AWS, PMP, Microsoft) that is *not* toward a bachelor's or master's degree.
  
-### Scenario 3 — Substantial Work Experience
+### Scenario C — Substantial Work Experience
 A student who has substantial professional experience in a knowledge/skill area that matches CPS ITC or ALY courses. This pathway requires a written portfolio narrative and a faculty review meeting.
  
-### Scenario 4 — Not Eligible
+### Scenario D — Not Eligible
 A student who earned a completed bachelor's or master's degree at another institution and wants to claim PLA credit using courses that were part of that completed degree. CPS does not award PLA credit for courses used to earn a previously completed degree.
  
 > Chatbot response for ineligible students: "CPS does not award PLA credit for courses that were used to earn a previously completed bachelor's or master's degree. PLA is designed for learning beyond a completed degree. Please contact your academic advisor for guidance."
@@ -70,7 +70,7 @@ Every student must provide the following during the chatbot intake, regardless o
  
 ## 4. Required Documents by Scenario
  
-### Scenario 1 — Prior Graduate Coursework
+### Scenario A — Prior Graduate Coursework
  
 | # | Required Document |
 |---|------------------|
@@ -80,7 +80,7 @@ Every student must provide the following during the chatbot intake, regardless o
  
 > If claiming multiple courses, a separate syllabus is required for each course.
  
-### Scenario 2 — Industry Certification
+### Scenario B — Industry Certification
  
 | # | Required Document |
 |---|------------------|
@@ -91,7 +91,7 @@ Every student must provide the following during the chatbot intake, regardless o
  
 > If the certification was exam-based or portfolio-based only, a transcript is **not** required.
  
-### Scenario 3 — Work Experience
+### Scenario C — Work Experience
  
 | # | Required Document |
 |---|------------------|
