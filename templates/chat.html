@@ -25,30 +25,26 @@
     <button id="send">Send</button>
   </div>
 
-<script> 
-  //reaches into HTML and references to the elements that are interactive
-  const msgsEl   = document.getElementById('messages'); //chat bubbles
-  const typingEl = document.getElementById('typing'); 
-  const msgEl    = document.getElementById('msg'); //message
+<script>
+  const msgsEl   = document.getElementById('messages');
+  const typingEl = document.getElementById('typing');
+  const msgEl    = document.getElementById('msg');
   const sendEl   = document.getElementById('send');
 
-  const conversationHistory = [];//setting up memory
-  let busy = false; //checking if the app is currently waiting for a response
+  const conversationHistory = [];
+  let busy = false;
 
   msgEl.addEventListener('keydown', e => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
-  });//send if hit enter 
+  });
+  sendEl.addEventListener('click', handleSend);
 
-  sendEl.addEventListener('click', handleSend);//send if the send button is hit
-
-  //main send function 
   async function handleSend() {
     const text = msgEl.value.trim();
     if (!text || busy) return;
     addMsg('user', text);
     msgEl.value = '';
     setBusy(true);
-    //calling the backend by talking to Flask
     try {
       const res = await fetch('/api/chat', {
         method: 'POST',
@@ -57,7 +53,6 @@
       });
       const data = await res.json();
       const answer = res.ok ? (data.answer || '') : (data.error || 'Request failed');
-      //memory updates and displays the responses
       conversationHistory.push({ role: 'user', content: text });
       conversationHistory.push({ role: 'assistant', content: answer });
       addMsg('bot', answer);
@@ -67,56 +62,111 @@
     setBusy(false);
     msgEl.focus();
   }
-//interact with the div in css for the "thinking" while the response comes
+
+  // Parse bot message for [SHOW_UPLOAD:Label] tokens and inject upload buttons
   function addMsg(role, text) {
     typingEl.style.display = 'none';
     const d = document.createElement('div');
     d.className = role === 'bot' ? 'msg-bot' : 'msg-user';
-    d.textContent = text;
-    msgsEl.insertBefore(d, typingEl);
+
+    if (role === 'bot') {
+      // Strip the token from display text and capture the label
+      const uploadRegex = /\[SHOW_UPLOAD:([^\]]+)\]/g;
+      const labels = [];
+      let match;
+      while ((match = uploadRegex.exec(text)) !== null) {
+        labels.push(match[1].trim());
+      }
+      const cleanText = text.replace(/\[SHOW_UPLOAD:[^\]]+\]/g, '').trim();
+      d.textContent = cleanText;
+      msgsEl.insertBefore(d, typingEl);
+
+      // Inject one upload button per label found
+      labels.forEach(label => {
+        const uploadDiv = document.createElement('div');
+        uploadDiv.className = 'msg-upload';
+        uploadDiv.innerHTML = `
+          <span class="upload-label">📎 Upload: <strong>${label}</strong></span>
+          <label class="upload-btn-inline">
+            Choose file
+            <input type="file" accept=".pdf,.png,.jpg,.jpeg,.docx" data-label="${label}" />
+          </label>
+          <span class="upload-status" id="status-${label.replace(/\s+/g,'-')}"></span>
+        `;
+        msgsEl.insertBefore(uploadDiv, typingEl);
+
+        // Attach upload handler to this specific input
+        uploadDiv.querySelector('input[type=file]').addEventListener('change', async (e) => {
+          const file = e.target.files[0];
+          if (!file) return;
+          const docLabel = e.target.getAttribute('data-label');
+          const statusEl = document.getElementById('status-' + docLabel.replace(/\s+/g,'-'));
+          statusEl.textContent = 'Uploading…';
+          setBusy(true);
+
+          const formData = new FormData();
+          formData.append('file', file);
+          formData.append('history', JSON.stringify(conversationHistory));
+          formData.append('label', docLabel);
+
+          try {
+            const res = await fetch('/api/upload', { method: 'POST', body: formData });
+            const data = await res.json();
+            const answer = res.ok ? (data.answer || '') : (data.error || 'Upload failed');
+            statusEl.textContent = '✅ ' + file.name;
+            conversationHistory.push({ role: 'user', content: `[Uploaded "${docLabel}": ${file.name}]` });
+            conversationHistory.push({ role: 'assistant', content: answer });
+            addMsg('bot', answer);
+          } catch {
+            statusEl.textContent = '❌ Upload failed';
+            addMsg('bot', 'Network error — could not upload file.');
+          }
+          setBusy(false);
+          e.target.value = '';
+        });
+      });
+
+    } else {
+      d.textContent = text;
+      msgsEl.insertBefore(d, typingEl);
+    }
+
     msgsEl.scrollTop = msgsEl.scrollHeight;
   }
-//locking and unlocking the UI depending on the user can type again
- function setBusy(v) {
+
+  function setBusy(v) {
     busy = v;
     sendEl.disabled = v;
     msgEl.disabled  = v;
-    // ✅ ADDED: also disable the upload button while busy
     document.getElementById('file-input').disabled = v;
-    // ✅ END ADDED
     typingEl.style.display = v ? 'block' : 'none';
     if (v) msgsEl.scrollTop = msgsEl.scrollHeight;
   }
- 
-  //file upload handler
+
+  // File upload handler for the always-visible paperclip (kept as fallback)
   document.getElementById('file-input').addEventListener('change', async (e) => {
     const file = e.target.files[0];
     if (!file) return;
- 
     addMsg('user', `📎 ${file.name}`);
     setBusy(true);
- 
     const formData = new FormData();
     formData.append('file', file);
     formData.append('history', JSON.stringify(conversationHistory));
     formData.append('label', file.name);
- 
     try {
       const res = await fetch('/api/upload', { method: 'POST', body: formData });
       const data = await res.json();
       const answer = res.ok ? (data.answer || '') : (data.error || 'Upload failed');
- 
       conversationHistory.push({ role: 'user', content: `[Uploaded file: ${file.name}]` });
       conversationHistory.push({ role: 'assistant', content: answer });
       addMsg('bot', answer);
     } catch {
       addMsg('bot', 'Network error — could not upload file.');
     }
- 
     setBusy(false);
-    e.target.value = ''; // reset so the same file can be re-uploaded if needed
+    e.target.value = '';
   });
- 
+
   addMsg('bot', 'Hello! Welcome to the Northeastern CPS Prior Learning Assessment assistant. To get started, please enter your NUID (your 9-digit Northeastern University ID number).');
 </script>
 </body>
