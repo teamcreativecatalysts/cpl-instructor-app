@@ -89,7 +89,7 @@ INTERVIEW FLOW:
 5. Based on their answer, identify the most likely scenario and CONFIRM with the student.
 6. If they describe a completed degree (not eligible), inform them and direct to advisor.
 7. Once scenario is confirmed, follow the matching question flow from the policy digest.
-8. When asking which CPS courses the student wants credit for, always include these two links:
+8. Ask the user which CPS courses the student wants credit for. When doing so, always include these two links:
    - ITC courses: https://catalog.northeastern.edu/course-descriptions/itc/
    - ALY courses: https://catalog.northeastern.edu/course-descriptions/aly/
    Tell the student: if their course is outside ITC/ALY, they should describe the subject area
