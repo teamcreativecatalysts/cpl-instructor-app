@@ -284,6 +284,11 @@ def api_chat():
         )
 
         answer = (response.choices[0].message.content or "").strip()
+       try:
+    save_session_to_db("999999999", "TEST USER", "TEST", [{"role": "user", "content": "test"}])
+    app.logger.info("TEST DB WRITE SUCCESS")
+except Exception as e:
+    app.logger.exception("TEST DB WRITE FAILED")
         # Attempt to extract nuid/name/scenario from the session metadata if provided
         session_meta = data.get("session_meta") or {}
         nuid = session_meta.get("nuid")
