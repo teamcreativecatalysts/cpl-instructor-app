@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prior Learning Assessment | CPS</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='chat.css') }}">
+<style>
+  body {
+    display: block;
+    height: auto;
+    background: #f5f5f5;
+  }
+  .page {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 4rem;
+  }
+  .page h1 {
+    font-size: 1.4rem;
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+    color: #111;
+  }
+  .page h2 {
+    font-size: 1rem;
+    font-weight: bold;
+    margin-top: 2rem;
+    margin-bottom: 0.5rem;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 0.35rem;
+    color: #111;
+  }
+  .page p {
+    font-size: 14px;
+    line-height: 1.65;
+    color: #333;
+    margin-bottom: 0.85rem;
+  }
+  .card {
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin-bottom: 1rem;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  .card strong {
+    display: block;
+    margin-bottom: 4px;
+    color: #111;
+  }
+  .card p { margin: 0; color: #444; }
+  .card ul { margin: 6px 0 0 1.2rem; color: #444; }
+  .card li { margin-bottom: 0.25rem; }
+  .not-eligible {
+    background: #fff5f5;
+    border: 1px solid #f5c6c6;
+    border-left: 3px solid #C8102E;
+    border-radius: 0 10px 10px 0;
+    padding: 12px 16px;
+    font-size: 14px;
+    color: #333;
+    margin-bottom: 1rem;
+    line-height: 1.6;
+  }
+  .note {
+    background: #fff8e1;
+    border: 1px dashed #C8102E;
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 13px;
+    color: #444;
+    margin-bottom: 1.5rem;
+    line-height: 1.6;
+  }
+  .divider {
+    border: none;
+    border-top: 1px solid #ddd;
+    margin: 1.75rem 0;
+  }
+  .cta {
+    display: inline-block;
+    background: #C8102E;
+    color: white;
+    text-decoration: none;
+    padding: 10px 22px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: Arial, sans-serif;
+    font-weight: bold;
+  }
+  .cta:hover { background: #a50d26; }
+</style>
+</head>
+<body>
+
+<div id="header">
+  Prior Learning Assessment
+  <span>Northeastern University — College of Professional Studies</span>
+</div>
+
+<div class="page">
+
+  <h1>What is Prior Learning Assessment?</h1>
+  <p>Prior Learning Assessment (PLA) is the process by which Northeastern's College of Professional Studies (CPS) evaluates learning you have gained outside of a traditional classroom — through professional experience, industry certifications, or graduate coursework at another institution — and determines whether it qualifies for academic credit toward your CPS degree or certificate.</p>
+  <p>All PLA requests are reviewed by faculty subject matter experts and must meet CPS academic standards before any credit is awarded. Credit is recorded as transfer credit on your official transcript.</p>
+
+  <div class="note">
+    CPS allows a maximum of 12 PLA credits. For master's degrees, transfer credit cannot exceed 25% of total required credit hours. For graduate certificates, the equivalent of one course is the maximum.
+  </div>
+
+  <hr class="divider">
+
+  <h2>Who is eligible</h2>
+
+  <div class="card">
+    <strong>Prior graduate coursework (incomplete degree)</strong>
+    <p>You earned credits toward a master's degree at another institution but left the program before a diploma was awarded.</p>
+  </div>
+
+  <div class="card">
+    <strong>Industry certification</strong>
+    <p>You hold a professional certification (such as CompTIA, AWS, PMP, or Microsoft) or completed a certification program — not a bachelor's or master's degree.</p>
+  </div>
+
+  <div class="card">
+    <strong>Substantial work experience</strong>
+    <p>You have significant professional experience in a field that aligns with the learning outcomes of specific CPS courses in the ITC or ALY curriculum.</p>
+  </div>
+
+  <div class="not-eligible">
+    <strong>Not eligible:</strong> If you completed a full bachelor's or master's degree at another institution, you cannot claim PLA credit for courses that were used to earn that degree.
+  </div>
+
+  <hr class="divider">
+
+  <h2>Required documents</h2>
+
+  <div class="card">
+    <strong>Prior graduate coursework</strong>
+    <ul>
+      <li>Official transcript from the prior institution</li>
+      <li>Course syllabus for each course being claimed</li>
+      <li>Resume</li>
+      <li>Completed PLA Request Form</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <strong>Industry certification</strong>
+    <ul>
+      <li>Official certification credential, certificate, or digital badge</li>
+      <li>Syllabus or outline from the certification program</li>
+      <li>Resume</li>
+      <li>Transcript (only if formal coursework was part of the certification)</li>
+      <li>Completed PLA Request Form</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <strong>Work experience</strong>
+    <ul>
+      <li>Resume with detailed job descriptions</li>
+      <li>HR statement confirming job title, responsibilities, and length of employment</li>
+      <li>Written portfolio narrative connecting your experience to each course's learning objectives</li>
+      <li>Work samples or project artifacts (can be redacted if confidential)</li>
+      <li>Professional reference contact information</li>
+      <li>Completed PLA Request Form</li>
+    </ul>
+  </div>
+
+  <hr class="divider">
+
+  <h2>How the review works</h2>
+
+  <p>Once you submit your documents, your academic advisor confirms initial eligibility. Your materials are then reviewed by a Program Lead or faculty subject matter expert, who evaluates whether your prior learning maps to the learning outcomes of the course you are claiming. For work experience requests, a brief meeting with a faculty member is also required.</p>
+  <p>If approved, the request is escalated to the Assistant Dean for final authorization and the Registrar's Office applies the credit to your transcript. If denied, your advisor will explain the decision and you may resubmit with additional documentation. Allow 2–3 weeks from the date of a complete submission.</p>
+
+  <hr class="divider">
+
+  <a href="/chat" class="cta">Submit your application here</a>
+
+</div>
+
+</body>
+</html>
