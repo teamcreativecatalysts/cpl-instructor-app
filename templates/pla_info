@@ -96,9 +96,9 @@
 </head>
 <body>
 
-<div id="header">
-  Prior Learning Assessment
-  <span>Northeastern University — College of Professional Studies</span>
+<div id="header" style="background: #C8102E; color: white; padding: 14px 20px; font-size: 16px; font-weight: bold; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;">
+  <span style="font-size: 18px; font-weight: bold; letter-spacing: 0.01em;">Prior Learning Assessment</span>
+  <span style="font-size: 12px; font-weight: normal; opacity: 0.85; letter-spacing: 0.03em; text-transform: uppercase;">Northeastern University — College of Professional Studies</span>
 </div>
 
 <div class="page">
@@ -116,17 +116,17 @@
   <h2>Who is eligible</h2>
 
   <div class="card">
-    <strong>Prior graduate coursework (incomplete degree)</strong>
+    <strong>Scenario A — Prior graduate coursework (incomplete degree)</strong>
     <p>You earned credits toward a master's degree at another institution but left the program before a diploma was awarded.</p>
   </div>
 
   <div class="card">
-    <strong>Industry certification</strong>
+    <strong>Scenario B — Industry certification</strong>
     <p>You hold a professional certification (such as CompTIA, AWS, PMP, or Microsoft) or completed a certification program — not a bachelor's or master's degree.</p>
   </div>
 
   <div class="card">
-    <strong>Substantial work experience</strong>
+    <strong>Scenario C — Substantial work experience</strong>
     <p>You have significant professional experience in a field that aligns with the learning outcomes of specific CPS courses in the ITC or ALY curriculum.</p>
   </div>
 
@@ -139,7 +139,7 @@
   <h2>Required documents</h2>
 
   <div class="card">
-    <strong>Prior graduate coursework</strong>
+    <strong>A — Prior graduate coursework</strong>
     <ul>
       <li>Official transcript from the prior institution</li>
       <li>Course syllabus for each course being claimed</li>
@@ -149,7 +149,7 @@
   </div>
 
   <div class="card">
-    <strong>Industry certification</strong>
+    <strong>B — Industry certification</strong>
     <ul>
       <li>Official certification credential, certificate, or digital badge</li>
       <li>Syllabus or outline from the certification program</li>
@@ -160,7 +160,7 @@
   </div>
 
   <div class="card">
-    <strong>Work experience</strong>
+    <strong>C — Work experience</strong>
     <ul>
       <li>Resume with detailed job descriptions</li>
       <li>HR statement confirming job title, responsibilities, and length of employment</li>
