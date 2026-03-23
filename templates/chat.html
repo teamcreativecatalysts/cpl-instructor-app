@@ -7,38 +7,88 @@
   <link rel="stylesheet" href="/static/chat.css" />
 </head>
 <body>
-
+ 
   <div id="header">
     PLA Assistant <span> Northeastern University</span>
   </div>
-
+ 
   <div id="messages">
     <div id="typing">Thinking…</div>
   </div>
-
+ 
   <div id="input-bar">
-     <label id="upload-btn" title="Attach a file">
+    <label id="upload-btn" title="Attach a file">
       📎
       <input type="file" id="file-input" accept=".pdf,.png,.jpg,.jpeg" />
     </label>
     <textarea id="msg" placeholder="Type your message…" rows="1"></textarea>
     <button id="send">Send</button>
   </div>
-
+ 
 <script>
   const msgsEl   = document.getElementById('messages');
   const typingEl = document.getElementById('typing');
   const msgEl    = document.getElementById('msg');
   const sendEl   = document.getElementById('send');
-
+ 
   const conversationHistory = [];
   let busy = false;
-
+ 
+  // FIX: Track session metadata so the backend can save sessions to the DB.
+  // These values are extracted from the conversation as the student provides them.
+  const sessionMeta = {
+    nuid: null,
+    student_name: null,
+    scenario: null,
+  };
+ 
+  // FIX: After each exchange, scan the conversation history to extract
+  // NUID, student name, and scenario if not yet captured.
+  function updateSessionMeta(userText, botText) {
+    // Extract NUID — look for a 9-digit number in any user message
+    if (!sessionMeta.nuid) {
+      const nuidMatch = userText.match(/\b(\d{9})\b/);
+      if (nuidMatch) {
+        sessionMeta.nuid = nuidMatch[1];
+      }
+    }
+ 
+    // Extract student name — the bot asks for full name after NUID.
+    // Heuristic: if the bot's previous message asked for their name and
+    // the user replied with 2–4 words that look like a name, capture it.
+    if (!sessionMeta.student_name && sessionMeta.nuid) {
+      const botAskedName = /full name|your name/i.test(botText);
+      if (botAskedName) {
+        // The NEXT user message will be the name — handled on the following turn.
+        // We flag this by setting a temporary marker.
+        sessionMeta._awaitingName = true;
+      }
+    }
+    if (sessionMeta._awaitingName && !sessionMeta.student_name) {
+      const nameLike = /^[A-Za-z]+([\s\-'][A-Za-z]+){1,3}$/.test(userText.trim());
+      if (nameLike) {
+        sessionMeta.student_name = userText.trim();
+        sessionMeta._awaitingName = false;
+      }
+    }
+ 
+    // Extract scenario — detect confirmation phrases in bot messages
+    if (!sessionMeta.scenario) {
+      if (/scenario\s*(1|a|one)|prior graduate coursework/i.test(botText)) {
+        sessionMeta.scenario = 'Scenario 1 - Prior Graduate Coursework';
+      } else if (/scenario\s*(2|b|two)|industry certification/i.test(botText)) {
+        sessionMeta.scenario = 'Scenario 2 - Industry Certification';
+      } else if (/scenario\s*(3|c|three)|work experience/i.test(botText)) {
+        sessionMeta.scenario = 'Scenario 3 - Work Experience';
+      }
+    }
+  }
+ 
   msgEl.addEventListener('keydown', e => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
   });
   sendEl.addEventListener('click', handleSend);
-
+ 
   async function handleSend() {
     const text = msgEl.value.trim();
     if (!text || busy) return;
@@ -49,12 +99,19 @@
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text, history: conversationHistory }),
+        // FIX: include session_meta in every request so the backend can persist the session
+        body: JSON.stringify({
+          message: text,
+          history: conversationHistory,
+          session_meta: sessionMeta,
+        }),
       });
       const data = await res.json();
       const answer = res.ok ? (data.answer || '') : (data.error || 'Request failed');
       conversationHistory.push({ role: 'user', content: text });
       conversationHistory.push({ role: 'assistant', content: answer });
+      // FIX: update session metadata after each exchange
+      updateSessionMeta(text, answer);
       addMsg('bot', answer);
     } catch (e) {
       addMsg('bot', 'Network error — please try again.');
@@ -62,13 +119,13 @@
     setBusy(false);
     msgEl.focus();
   }
-
+ 
   // Parse bot message for [SHOW_UPLOAD:Label] tokens and inject upload buttons
   function addMsg(role, text) {
     typingEl.style.display = 'none';
     const d = document.createElement('div');
     d.className = role === 'bot' ? 'msg-bot' : 'msg-user';
-
+ 
     if (role === 'bot') {
       // Strip the token from display text and capture the label
       const uploadRegex = /\[SHOW_UPLOAD:([^\]]+)\]/g;
@@ -80,7 +137,7 @@
       const cleanText = text.replace(/\[SHOW_UPLOAD:[^\]]+\]/g, '').trim();
       d.textContent = cleanText;
       msgsEl.insertBefore(d, typingEl);
-
+ 
       // Inject one upload button per label found
       labels.forEach(label => {
         const uploadDiv = document.createElement('div');
@@ -94,7 +151,7 @@
           <span class="upload-status" id="status-${label.replace(/\s+/g,'-')}"></span>
         `;
         msgsEl.insertBefore(uploadDiv, typingEl);
-
+ 
         // Attach upload handler to this specific input
         uploadDiv.querySelector('input[type=file]').addEventListener('change', async (e) => {
           const file = e.target.files[0];
@@ -103,12 +160,14 @@
           const statusEl = document.getElementById('status-' + docLabel.replace(/\s+/g,'-'));
           statusEl.textContent = 'Uploading…';
           setBusy(true);
-
+ 
           const formData = new FormData();
           formData.append('file', file);
           formData.append('history', JSON.stringify(conversationHistory));
           formData.append('label', docLabel);
-
+          // FIX: include session_meta in upload requests too
+          formData.append('session_meta', JSON.stringify(sessionMeta));
+ 
           try {
             const res = await fetch('/api/upload', { method: 'POST', body: formData });
             const data = await res.json();
@@ -116,6 +175,7 @@
             statusEl.textContent = '✅ ' + file.name;
             conversationHistory.push({ role: 'user', content: `[Uploaded "${docLabel}": ${file.name}]` });
             conversationHistory.push({ role: 'assistant', content: answer });
+            updateSessionMeta(`[Uploaded "${docLabel}": ${file.name}]`, answer);
             addMsg('bot', answer);
           } catch {
             statusEl.textContent = '❌ Upload failed';
@@ -125,15 +185,15 @@
           e.target.value = '';
         });
       });
-
+ 
     } else {
       d.textContent = text;
       msgsEl.insertBefore(d, typingEl);
     }
-
+ 
     msgsEl.scrollTop = msgsEl.scrollHeight;
   }
-
+ 
   function setBusy(v) {
     busy = v;
     sendEl.disabled = v;
@@ -142,7 +202,7 @@
     typingEl.style.display = v ? 'block' : 'none';
     if (v) msgsEl.scrollTop = msgsEl.scrollHeight;
   }
-
+ 
   // File upload handler for the always-visible paperclip (kept as fallback)
   document.getElementById('file-input').addEventListener('change', async (e) => {
     const file = e.target.files[0];
@@ -153,12 +213,14 @@
     formData.append('file', file);
     formData.append('history', JSON.stringify(conversationHistory));
     formData.append('label', file.name);
+    formData.append('session_meta', JSON.stringify(sessionMeta));
     try {
       const res = await fetch('/api/upload', { method: 'POST', body: formData });
       const data = await res.json();
       const answer = res.ok ? (data.answer || '') : (data.error || 'Upload failed');
       conversationHistory.push({ role: 'user', content: `[Uploaded file: ${file.name}]` });
       conversationHistory.push({ role: 'assistant', content: answer });
+      updateSessionMeta(`[Uploaded file: ${file.name}]`, answer);
       addMsg('bot', answer);
     } catch {
       addMsg('bot', 'Network error — could not upload file.');
@@ -166,9 +228,10 @@
     setBusy(false);
     e.target.value = '';
   });
-
+ 
   addMsg('bot', 'Hello! Welcome to the Northeastern CPS Prior Learning Assessment assistant. To get started, please enter your NUID (your 9-digit Northeastern University ID number).');
 </script>
 </body>
 </html>
+ 
  
