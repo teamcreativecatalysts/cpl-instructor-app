@@ -4,11 +4,11 @@ from openai import AzureOpenAI
 import json
 from pathlib import Path
 import pyodbc
- 
- 
+
+
 # Explicit template folder for Azure App Service reliability
 app = Flask(__name__, template_folder="templates")
- 
+
 # ADDED — loads both data files at startup:
 BASE_DIR = Path(__file__).resolve().parent
  
@@ -23,7 +23,7 @@ try:
 except Exception as e:
     INTERVIEW_SCHEMA = {}
     app.logger.warning(f"Could not load interview_schema.json: {e}")
- 
+
 # Build system prompt
 def build_system_prompt():
     return f"""
@@ -43,7 +43,7 @@ NON-NEGOTIABLE RULES:
   do NOT ask which program area it belongs to. Infer it automatically from the course code 
   and move on. Only ask the program area question if the course prefix is ambiguous 
   (e.g., CHEM, ACC, CMN, or other non-ITC/ALY codes).
- 
+
 DOCUMENT COLLECTION RULES:
 - When you reach the document checklist stage for any scenario, present documents ONE AT A TIME.
 - For each document, ask if the student has it ready. If they say yes (or confirm), end your
@@ -95,15 +95,15 @@ INTERVIEW FLOW:
    Always put each piece of collected information on its own line with a blank line between them.
  
 IMPORTANT: Each step = exactly one message from you. One step. One question. One send.
- 
+
 POLICY DIGEST:
 {POLICY_DIGEST}
  
 DATA TO COLLECT (JSON schema keys):
 {json.dumps(INTERVIEW_SCHEMA, indent=2)}
 """.strip()
- 
- 
+
+
 # ===============================
 # Azure OpenAI Client Factory
 # ===============================
@@ -111,12 +111,12 @@ def get_client():
     endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
     api_key = os.getenv("AZURE_OPENAI_API_KEY")
     api_version = os.getenv("AZURE_OPENAI_API_VERSION", "2024-12-01-preview")
- 
+
     if not endpoint:
         return None, "Missing AZURE_OPENAI_ENDPOINT"
     if not api_key:
         return None, "Missing AZURE_OPENAI_API_KEY"
- 
+
     try:
         client = AzureOpenAI(
             azure_endpoint=endpoint,
@@ -126,8 +126,8 @@ def get_client():
         return client, None
     except Exception as e:
         return None, f"Client initialization failed: {type(e).__name__}"
- 
- 
+
+
 # ===============================
 # Static File Route (bulletproof)
 # ===============================
@@ -135,21 +135,21 @@ def get_client():
 def static_files(filename):
     static_dir = os.path.join(os.path.dirname(__file__), "static")
     return send_from_directory(static_dir, filename)
- 
- 
+
+
 # ===============================
 # Basic Pages
 # ===============================
 @app.get("/")
 def home():
     return render_template("index.html")
- 
- 
+
+
 @app.get("/chat")
 def chat_page():
     return render_template("chat.html")
- 
- 
+
+
 @app.get("/admin")
 def admin_page():
     status = {
@@ -160,13 +160,13 @@ def admin_page():
         "SQL_CONNECTION_STRING": "✅ set" if os.getenv("SQL_CONNECTION_STRING") else "❌ missing",
     }
     return render_template("admin.html", status=status)
- 
- 
+
+
 @app.get("/health")
 def health():
     return jsonify({"status": "ok"})
- 
- 
+
+
 # ===============================
 # DEBUG ROUTE — SDK versions
 # ===============================
@@ -182,8 +182,8 @@ def versions():
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
- 
- 
+
+
 # ===============================
 # DB CHECK ROUTE
 # ===============================
@@ -192,7 +192,7 @@ def dbcheck():
     conn_str = os.getenv("SQL_CONNECTION_STRING")
     if not conn_str:
         return jsonify({"error": "Missing SQL_CONNECTION_STRING"}), 500
- 
+
     try:
         conn = pyodbc.connect(conn_str, timeout=10)
         cursor = conn.cursor()
@@ -206,8 +206,8 @@ def dbcheck():
             "error": f"DB check failed: {type(e).__name__}",
             "details": str(e),
         }), 500
- 
- 
+
+
 # ===============================
 # DB Save Helper (safe — won't crash if DB not ready)
 # ===============================
@@ -216,27 +216,26 @@ def save_session_to_db(nuid, student_name, scenario, conversation_log):
     if not conn_str:
         app.logger.warning("SQL_CONNECTION_STRING not set — skipping DB save.")
         return
- 
+
     try:
-        conn = pyodbc.connect(conn_str, timeout=10)
+        conn = pyodbc.connect(conn_str, timeout=10, autocommit=True)
         cursor = conn.cursor()
+        conversation_text = json.dumps(conversation_log)[:4000]
         cursor.execute(
             """
             INSERT INTO pla_sessions (nuid, student_name, scenario, conversation_log)
             VALUES (?, ?, ?, ?)
             """,
-            nuid,
-            student_name,
-            scenario,
-            json.dumps(conversation_log),
+            str(nuid),
+            str(student_name),
+            str(scenario),
+            conversation_text,
         )
-        conn.commit()
-        conn.close()
-        app.logger.info(f"Session saved for NUID: {nuid}")
+        app.logger.info(f"DB INSERT SUCCESS for NUID: {nuid}")
     except Exception as e:
-        app.logger.exception(f"DB save failed (non-fatal): {e}")
- 
- 
+        app.logger.exception(f"DB ERROR: {e}")
+
+
 # ===============================
 # Chat API Endpoint
 # ===============================
@@ -245,20 +244,20 @@ def api_chat():
     try:
         data = request.get_json(silent=True) or {}
         user_message = (data.get("message") or "").strip()
- 
+
         if not user_message:
             return jsonify({"error": "Message is required"}), 400
- 
+
         deployment = os.getenv("AZURE_OPENAI_DEPLOYMENT")
         if not deployment:
             return jsonify({"error": "Missing AZURE_OPENAI_DEPLOYMENT"}), 500
- 
+
         client, err = get_client()
         if err:
             return jsonify({"error": err}), 500
- 
+
         history = data.get("history") or []
- 
+
         # Sanitise — only keep valid role/content pairs
         safe_history = [
             {"role": h["role"], "content": h["content"]}
@@ -267,7 +266,7 @@ def api_chat():
             and h.get("role") in ("user", "assistant")
             and isinstance(h.get("content"), str)
         ]
- 
+
         response = client.chat.completions.create(
             model=deployment,
             messages=[
@@ -277,9 +276,9 @@ def api_chat():
             ],
             temperature=0.3,
         )
- 
+
         answer = (response.choices[0].message.content or "").strip()
- 
+
         # FIX: Read session_meta sent by the frontend (nuid, student_name, scenario).
         # The frontend extracts these from the conversation as they are collected and
         # passes them back in each request so the backend can persist the session.
@@ -287,23 +286,23 @@ def api_chat():
         nuid = session_meta.get("nuid")
         student_name = session_meta.get("student_name")
         scenario = session_meta.get("scenario")
- 
+
         if nuid and student_name:
             full_history = safe_history + [
                 {"role": "user", "content": user_message},
                 {"role": "assistant", "content": answer},
             ]
             save_session_to_db(nuid, student_name, scenario, full_history)
- 
+
         return jsonify({"answer": answer})
- 
+
     except Exception as e:
         app.logger.exception("Azure OpenAI call failed")
         return jsonify({
             "error": f"Azure OpenAI call failed: {type(e).__name__}"
         }), 500
- 
- 
+
+
 # ===============================
 # Local Dev Entry Point
 # ===============================
