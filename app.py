@@ -64,10 +64,10 @@ SCENARIO DETECTION APPROACH:
 - After collecting NUID and name, ask the student to describe their background in their own words
   INSTEAD of immediately presenting a lettered menu.
 - Listen for key signals in their answer:
-    * "took courses / credits / enrolled at another school but didn't finish" → likely Scenario A
-    * "certification / CompTIA / AWS / PMP / bootcamp" → likely Scenario B
-    * "years of experience / work history / job responsibilities / industry background" → likely Scenario C
-    * "completed my degree / earned my master's / graduated from" → likely NOT eligible (Scenario D)
+    * "took courses / credits / enrolled at another school but didn't finish" -> likely Scenario A
+    * "certification / CompTIA / AWS / PMP / bootcamp" -> likely Scenario B
+    * "years of experience / work history / job responsibilities / industry background" -> likely Scenario C
+    * "completed my degree / earned my master's / graduated from" -> likely NOT eligible (Scenario D)
 - Based on those signals, name the scenario you believe applies and ASK THE STUDENT TO CONFIRM
   before proceeding. Example: "That sounds like Scenario C: Work Experience. To confirm — you're
   applying based on professional experience, not a certification or prior coursework. Is that right?"
@@ -239,35 +239,26 @@ def save_session_to_db(nuid, student_name, scenario, conversation_log):
 # ===============================
 # Chat API Endpoint
 # ===============================
-@app.post("/api/upload")
-def api_upload():
+@app.post("/api/chat")
+def api_chat():
     try:
-        file = request.files.get("file")
-        label = request.form.get("label", "document")
-        history_raw = request.form.get("history", "[]")
-        session_meta_raw = request.form.get("session_meta", "{}")
- 
-        if not file:
-            return jsonify({"error": "No file provided"}), 400
- 
+        data = request.get_json(silent=True) or {}
+        user_message = (data.get("message") or "").strip()
+
+        if not user_message:
+            return jsonify({"error": "Message is required"}), 400
+
         deployment = os.getenv("AZURE_OPENAI_DEPLOYMENT")
         if not deployment:
             return jsonify({"error": "Missing AZURE_OPENAI_DEPLOYMENT"}), 500
- 
+
         client, err = get_client()
         if err:
             return jsonify({"error": err}), 500
- 
-        try:
-            history = json.loads(history_raw)
-        except Exception:
-            history = []
- 
-        try:
-            session_meta = json.loads(session_meta_raw)
-        except Exception:
-            session_meta = {}
- 
+
+        history = data.get("history") or []
+
+        # Sanitise — only keep valid role/content pairs
         safe_history = [
             {"role": h["role"], "content": h["content"]}
             for h in history
@@ -275,44 +266,37 @@ def api_upload():
             and h.get("role") in ("user", "assistant")
             and isinstance(h.get("content"), str)
         ]
- 
-        # Tell the model a file was uploaded and to move to the next document
-        upload_message = (
-            f'[The student has uploaded their "{label}": {file.filename}. '
-            f'Acknowledge the upload, confirm what was received, and move on '
-            f'to the next document in the checklist.]'
-        )
- 
+
         response = client.chat.completions.create(
             model=deployment,
             messages=[
                 {"role": "system", "content": build_system_prompt()},
             ] + safe_history + [
-                {"role": "user", "content": upload_message},
+                {"role": "user", "content": user_message},
             ],
             temperature=0.3,
         )
- 
+
         answer = (response.choices[0].message.content or "").strip()
- 
-        # Save session if we have enough metadata
+
+        session_meta = data.get("session_meta") or {}
         nuid = session_meta.get("nuid")
         student_name = session_meta.get("student_name")
         scenario = session_meta.get("scenario")
- 
+
         if nuid and student_name:
             full_history = safe_history + [
-                {"role": "user", "content": upload_message},
+                {"role": "user", "content": user_message},
                 {"role": "assistant", "content": answer},
             ]
             save_session_to_db(nuid, student_name, scenario, full_history)
- 
+
         return jsonify({"answer": answer})
- 
+
     except Exception as e:
-        app.logger.exception("Upload handler failed")
+        app.logger.exception("Azure OpenAI call failed")
         return jsonify({
-            "error": f"Upload failed: {type(e).__name__}"
+            "error": f"Azure OpenAI call failed: {type(e).__name__}"
         }), 500
 
 
