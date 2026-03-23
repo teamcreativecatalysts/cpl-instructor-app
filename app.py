@@ -1,4 +1,6 @@
 import os
+import base64
+import tempfile
 from flask import Flask, render_template, request, jsonify, send_from_directory
 from openai import AzureOpenAI
 import json
@@ -298,6 +300,190 @@ def api_chat():
         return jsonify({
             "error": f"Azure OpenAI call failed: {type(e).__name__}"
         }), 500
+
+
+# ===============================
+# Upload API Endpoint
+# ===============================
+ALLOWED_EXTENSIONS = {".pdf", ".png", ".jpg", ".jpeg", ".docx"}
+MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB
+
+def _extract_text_from_upload(file_bytes: bytes, filename: str) -> tuple[str | None, str | None]:
+    """
+    Return (text_content, media_type) for the uploaded file.
+    - PDF/images: return base64 + media_type for vision-capable model.
+    - DOCX: extract plain text via python-docx (if available).
+    - Fallback: try decoding as UTF-8 text.
+    Returns (None, error_message) on failure.
+    """
+    ext = Path(filename).suffix.lower()
+
+    if ext in (".png", ".jpg", ".jpeg"):
+        media_type = "image/png" if ext == ".png" else "image/jpeg"
+        b64 = base64.standard_b64encode(file_bytes).decode()
+        return b64, media_type
+
+    if ext == ".pdf":
+        # Send as base64 PDF; GPT-4o vision can read PDFs directly
+        b64 = base64.standard_b64encode(file_bytes).decode()
+        return b64, "application/pdf"
+
+    if ext == ".docx":
+        try:
+            import docx
+            with tempfile.NamedTemporaryFile(suffix=".docx", delete=False) as tmp:
+                tmp.write(file_bytes)
+                tmp_path = tmp.name
+            doc = docx.Document(tmp_path)
+            os.unlink(tmp_path)
+            text = "\n".join(p.text for p in doc.paragraphs if p.text.strip())
+            return text, "text/plain"
+        except ImportError:
+            # python-docx not installed — fall through to UTF-8 attempt
+            pass
+        except Exception as e:
+            return None, f"Could not read DOCX: {e}"
+
+    # Generic: try UTF-8
+    try:
+        return file_bytes.decode("utf-8"), "text/plain"
+    except Exception:
+        return None, "Could not decode file as text."
+
+
+@app.post("/api/upload")
+def api_upload():
+    try:
+        # ── Validate file presence ──────────────────────────────────────────
+        if "file" not in request.files:
+            return jsonify({"error": "No file provided"}), 400
+
+        uploaded = request.files["file"]
+        filename = uploaded.filename or "upload"
+        ext = Path(filename).suffix.lower()
+
+        if ext not in ALLOWED_EXTENSIONS:
+            return jsonify({"error": f"File type '{ext}' not supported. Allowed: {', '.join(ALLOWED_EXTENSIONS)}"}), 400
+
+        file_bytes = uploaded.read()
+        if len(file_bytes) > MAX_UPLOAD_BYTES:
+            return jsonify({"error": "File exceeds 10 MB limit."}), 400
+
+        # ── Parse other form fields ─────────────────────────────────────────
+        label = request.form.get("label", filename)
+        history_raw = request.form.get("history", "[]")
+        session_meta_raw = request.form.get("session_meta", "{}")
+
+        try:
+            history = json.loads(history_raw)
+        except Exception:
+            history = []
+
+        try:
+            session_meta = json.loads(session_meta_raw)
+        except Exception:
+            session_meta = {}
+
+        # ── Azure OpenAI setup ──────────────────────────────────────────────
+        deployment = os.getenv("AZURE_OPENAI_DEPLOYMENT")
+        if not deployment:
+            return jsonify({"error": "Missing AZURE_OPENAI_DEPLOYMENT"}), 500
+
+        client, err = get_client()
+        if err:
+            return jsonify({"error": err}), 500
+
+        # ── Sanitise history ────────────────────────────────────────────────
+        safe_history = [
+            {"role": h["role"], "content": h["content"]}
+            for h in history
+            if isinstance(h, dict)
+            and h.get("role") in ("user", "assistant")
+            and isinstance(h.get("content"), str)
+        ]
+
+        # ── Build the user message that includes the file ───────────────────
+        content_data, media_type = _extract_text_from_upload(file_bytes, filename)
+
+        if content_data is None:
+            # media_type holds the error string in this case
+            return jsonify({"error": media_type}), 422
+
+        if media_type == "text/plain":
+            # Send as a text message
+            user_content = [
+                {
+                    "type": "text",
+                    "text": (
+                        f"I have uploaded the document labeled '{label}' (filename: {filename}).\n\n"
+                        f"Here is the extracted text content:\n\n{content_data}\n\n"
+                        "Please acknowledge receipt, briefly summarise what you can see in this document "
+                        "as it relates to my PLA request, note any gaps or issues, and then ask for the next document."
+                    ),
+                }
+            ]
+        elif media_type in ("image/png", "image/jpeg"):
+            user_content = [
+                {
+                    "type": "text",
+                    "text": (
+                        f"I have uploaded the document labeled '{label}' (filename: {filename}). "
+                        "Please acknowledge receipt, briefly summarise what you can see in this image "
+                        "as it relates to my PLA request, note any gaps or issues, and then ask for the next document."
+                    ),
+                },
+                {
+                    "type": "image_url",
+                    "image_url": {"url": f"data:{media_type};base64,{content_data}"},
+                },
+            ]
+        else:
+            # PDF as base64 — send as text with a note (vision models vary in PDF support)
+            # Safer: extract first ~3000 chars of base64 as a text summary note
+            user_content = [
+                {
+                    "type": "text",
+                    "text": (
+                        f"I have uploaded a PDF document labeled '{label}' (filename: {filename}). "
+                        f"The file is {len(file_bytes) // 1024} KB. "
+                        "Please acknowledge receipt of this PDF document, note it has been received for "
+                        "the PLA review, and then ask for the next document."
+                    ),
+                }
+            ]
+
+        # ── Call the model ──────────────────────────────────────────────────
+        response = client.chat.completions.create(
+            model=deployment,
+            messages=[
+                {"role": "system", "content": build_system_prompt()},
+            ] + safe_history + [
+                {"role": "user", "content": user_content},
+            ],
+            temperature=0.3,
+            max_tokens=800,
+        )
+
+        answer = (response.choices[0].message.content or "").strip()
+
+        # ── Persist to DB if we have enough metadata ────────────────────────
+        nuid = session_meta.get("nuid")
+        student_name = session_meta.get("student_name")
+        scenario = session_meta.get("scenario")
+
+        if nuid and student_name:
+            upload_note = f"[Uploaded '{label}': {filename}]"
+            full_history = safe_history + [
+                {"role": "user", "content": upload_note},
+                {"role": "assistant", "content": answer},
+            ]
+            save_session_to_db(nuid, student_name, scenario, full_history)
+
+        return jsonify({"answer": answer})
+
+    except Exception as e:
+        app.logger.exception("Upload handling failed")
+        return jsonify({"error": f"Upload failed: {type(e).__name__}: {e}"}), 500
 
 
 # ===============================
