@@ -168,9 +168,9 @@ def admin_page():
 def health():
     return jsonify({"status": "ok"})
 
-@app.get("/pla_info")
+@app.get("/pla_information")
 def pla_info():
-    return render_template("pla_info.html")
+    return render_template("pla_information.html")
 # ===============================
 # DEBUG ROUTE — SDK versions
 # ===============================
