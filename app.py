@@ -272,7 +272,7 @@ def upload_file_to_blob(file, filename):
 
     blob_client = blob_service.get_blob_client(
         container="documents",
-        blob=f"{uuid.uuid4()}_{filename}"
+        blob=f"{nuid}/{doc_type}/{filename}"
     )
 
     blob_client.upload_blob(file.stream, overwrite=True)
