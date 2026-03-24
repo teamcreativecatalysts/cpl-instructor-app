@@ -278,30 +278,6 @@ def upload_file_to_blob(file, filename, nuid, doc_type):
     blob_client.upload_blob(file.stream, overwrite=True)
 
     return blob_client.url
-
-# ========================================
-# Connecting to existing DB(pla_documents)
-# ========================================
-@app.post("/api/upload")
-def upload():
-    file = request.files.get("file")
-    nuid = request.form.get("nuid")
-    doc_type = request.form.get("document_type")
-
-    if not file:
-        return {"error": "No file"}, 400
-
-    file_url = upload_file_to_blob(file, file.filename, nuid, doc_type)
-
-    conn = pyodbc.connect(os.getenv("SQL_CONNECTION_STRING"), timeout=10, autocommit=True)
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        INSERT INTO pla_documents (nuid, document_type, file_url)
-        VALUES (?, ?, ?)
-    """, nuid, doc_type, file_url)
-
-    return {"file_url": file_url}
  
 # ===============================
 # Chat API Endpoint
@@ -530,9 +506,29 @@ def api_upload():
         )
 
         answer = (response.choices[0].message.content or "").strip()
-
-        # ── Persist to DB if we have enough metadata ────────────────────────
+     
+        # ===============================
+        # Save file to Blob + SQL
+        # ===============================
         nuid = session_meta.get("nuid")
+
+        if nuid:
+            file_url = upload_file_to_blob(
+                file=uploaded,
+                filename=filename,
+                nuid=nuid,
+                doc_type=label
+            )
+
+            conn = pyodbc.connect(os.getenv("SQL_CONNECTION_STRING"), timeout=10, autocommit=True)
+            cursor = conn.cursor()
+
+            cursor.execute("""
+                INSERT INTO pla_documents (nuid, document_type, file_url)
+                VALUES (?, ?, ?)
+            """, nuid, label, file_url)
+
+        # ── Persist session ─────────────────────────
         student_name = session_meta.get("student_name")
         scenario = session_meta.get("scenario")
 
