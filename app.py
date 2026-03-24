@@ -266,7 +266,7 @@ def save_session_to_db(nuid, student_name, scenario, conversation_log):
 # ===============================
 # Upload function
 # ===============================
-def upload_file_to_blob(file, filename):
+def upload_file_to_blob(file, filename, nuid, doc_type):
     conn_str = os.getenv("AZURE_STORAGE_CONNECTION_STRING")
     blob_service = BlobServiceClient.from_connection_string(conn_str)
 
@@ -279,9 +279,9 @@ def upload_file_to_blob(file, filename):
 
     return blob_client.url
 
-# ======================================
-# Connecting to existing DB(pla_documents
-# =======================================
+# ========================================
+# Connecting to existing DB(pla_documents)
+# ========================================
 @app.post("/api/upload")
 def upload():
     file = request.files.get("file")
@@ -291,7 +291,7 @@ def upload():
     if not file:
         return {"error": "No file"}, 400
 
-    file_url = upload_file_to_blob(file, file.filename)
+    file_url = upload_file_to_blob(file, file.filename, nuid, doc_type)
 
     conn = pyodbc.connect(os.getenv("SQL_CONNECTION_STRING"), timeout=10, autocommit=True)
     cursor = conn.cursor()
