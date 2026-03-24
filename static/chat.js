@@ -1,6 +1,11 @@
+let currentNUID = null;
 document.getElementById("send").addEventListener("click", async () => {
   const msg = document.getElementById("msg").value.trim();
   const out = document.getElementById("out");
+
+  if (/^\d{9}$/.test(msg)) {
+    currentNUID = msg;
+  }
 
   if (!msg) {
     out.textContent = "Please type a message first.";
@@ -28,6 +33,7 @@ document.getElementById("send").addEventListener("click", async () => {
     }
 
     out.textContent = data?.answer ?? text;
+
   } catch (e) {
     out.textContent = `Network error: ${e}`;
   }
