@@ -171,7 +171,7 @@ def health():
     return jsonify({"status": "ok"})
 @app.route('/pla-information')
 def pla_info():
-    return render_template('pla_info.html')
+    return render_template('pla_information.html')
 
 # ===============================
 # DEBUG ROUTE — SDK versions
