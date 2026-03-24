@@ -407,6 +407,7 @@ def api_upload():
             return jsonify({"error": f"File type '{ext}' not supported. Allowed: {', '.join(ALLOWED_EXTENSIONS)}"}), 400
 
         file_bytes = uploaded.read()
+        uploaded.stream.seek(0)
         if len(file_bytes) > MAX_UPLOAD_BYTES:
             return jsonify({"error": "File exceeds 10 MB limit."}), 400
 
@@ -442,71 +443,7 @@ def api_upload():
             and h.get("role") in ("user", "assistant")
             and isinstance(h.get("content"), str)
         ]
-
-        # ── Build the user message that includes the file ───────────────────
-        content_data, media_type = _extract_text_from_upload(file_bytes, filename)
-
-        if content_data is None:
-            # media_type holds the error string in this case
-            return jsonify({"error": media_type}), 422
-
-        if media_type == "text/plain":
-            # Send as a text message
-            user_content = [
-                {
-                    "type": "text",
-                    "text": (
-                        f"I have uploaded the document labeled '{label}' (filename: {filename}).\n\n"
-                        f"Here is the extracted text content:\n\n{content_data}\n\n"
-                        "Please acknowledge receipt, briefly summarise what you can see in this document "
-                        "as it relates to my PLA request, note any gaps or issues, and then ask for the next document."
-                    ),
-                }
-            ]
-        elif media_type in ("image/png", "image/jpeg"):
-            user_content = [
-                {
-                    "type": "text",
-                    "text": (
-                        f"I have uploaded the document labeled '{label}' (filename: {filename}). "
-                        "Please acknowledge receipt, briefly summarise what you can see in this image "
-                        "as it relates to my PLA request, note any gaps or issues, and then ask for the next document."
-                    ),
-                },
-                {
-                    "type": "image_url",
-                    "image_url": {"url": f"data:{media_type};base64,{content_data}"},
-                },
-            ]
-        else:
-            # PDF as base64 — send as text with a note (vision models vary in PDF support)
-            # Safer: extract first ~3000 chars of base64 as a text summary note
-            user_content = [
-                {
-                    "type": "text",
-                    "text": (
-                        f"I have uploaded a PDF document labeled '{label}' (filename: {filename}). "
-                        f"The file is {len(file_bytes) // 1024} KB. "
-                        "Please acknowledge receipt of this PDF document, note it has been received for "
-                        "the PLA review, and then ask for the next document."
-                    ),
-                }
-            ]
-
-        # ── Call the model ──────────────────────────────────────────────────
-        response = client.chat.completions.create(
-            model=deployment,
-            messages=[
-                {"role": "system", "content": build_system_prompt()},
-            ] + safe_history + [
-                {"role": "user", "content": user_content},
-            ],
-            temperature=0.3,
-            max_tokens=800,
-        )
-
-        answer = (response.choices[0].message.content or "").strip()
-     
+        
         # ===============================
         # Save file to Blob + SQL
         # ===============================
@@ -532,15 +469,9 @@ def api_upload():
         student_name = session_meta.get("student_name")
         scenario = session_meta.get("scenario")
 
-        if nuid and student_name:
-            upload_note = f"[Uploaded '{label}': {filename}]"
-            full_history = safe_history + [
-                {"role": "user", "content": upload_note},
-                {"role": "assistant", "content": answer},
-            ]
-            save_session_to_db(nuid, student_name, scenario, full_history)
-
-        return jsonify({"answer": answer})
+        return jsonify({
+            "answer": f"Upload successful for {label}. Let's continue."
+        })
 
     except Exception as e:
         app.logger.exception("Upload handling failed")
