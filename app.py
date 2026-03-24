@@ -170,7 +170,7 @@ def admin_page():
 def health():
     return jsonify({"status": "ok"})
  
-@app.route('/pla-information')
+@app.route('/pla_information')
 def pla_info():
     return render_template('pla_information.html')
 
