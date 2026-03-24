@@ -168,9 +168,7 @@ def admin_page():
 def health():
     return jsonify({"status": "ok"})
 
-@app.get("/pla_information")
-def pla_info():
-    return render_template("pla_information.html")
+
 # ===============================
 # DEBUG ROUTE — SDK versions
 # ===============================
@@ -214,6 +212,8 @@ def dbcheck():
 
 # ===============================
 # DB Save Helper (safe — won't crash if DB not ready)
+# Upserts by nuid: one row per student session, updated on every turn.
+# Requires nuid to be a UNIQUE or PRIMARY KEY column in pla_sessions.
 # ===============================
 def save_session_to_db(nuid, student_name, scenario, conversation_log):
     conn_str = os.getenv("SQL_CONNECTION_STRING")
@@ -225,17 +225,39 @@ def save_session_to_db(nuid, student_name, scenario, conversation_log):
         conn = pyodbc.connect(conn_str, timeout=10, autocommit=True)
         cursor = conn.cursor()
         conversation_text = json.dumps(conversation_log)[:4000]
+
+        # Try to update an existing row first.
+        # If no row exists yet (rowcount == 0), insert a new one.
         cursor.execute(
             """
-            INSERT INTO pla_sessions (nuid, student_name, scenario, conversation_log)
-            VALUES (?, ?, ?, ?)
+            UPDATE pla_sessions
+            SET student_name    = ?,
+                scenario        = ?,
+                conversation_log = ?,
+                updated_at      = GETDATE()
+            WHERE nuid = ?
             """,
-            str(nuid),
             str(student_name),
             str(scenario),
             conversation_text,
+            str(nuid),
         )
-        app.logger.info(f"DB INSERT SUCCESS for NUID: {nuid}")
+
+        if cursor.rowcount == 0:
+            cursor.execute(
+                """
+                INSERT INTO pla_sessions (nuid, student_name, scenario, conversation_log)
+                VALUES (?, ?, ?, ?)
+                """,
+                str(nuid),
+                str(student_name),
+                str(scenario),
+                conversation_text,
+            )
+            app.logger.info(f"DB INSERT (new session) for NUID: {nuid}")
+        else:
+            app.logger.info(f"DB UPDATE (existing session) for NUID: {nuid}")
+
     except Exception as e:
         app.logger.exception(f"DB ERROR: {e}")
 
