@@ -6,6 +6,8 @@ from openai import AzureOpenAI
 import json
 from pathlib import Path
 import pyodbc
+from azure.storage.blob import BlobServiceClient
+import uuid
 
 
 # Explicit template folder for Azure App Service reliability
@@ -261,7 +263,46 @@ def save_session_to_db(nuid, student_name, scenario, conversation_log):
     except Exception as e:
         app.logger.exception(f"DB ERROR: {e}")
 
+# ===============================
+# Upload function
+# ===============================
+def upload_file_to_blob(file, filename):
+    conn_str = os.getenv("AZURE_STORAGE_CONNECTION_STRING")
+    blob_service = BlobServiceClient.from_connection_string(conn_str)
 
+    blob_client = blob_service.get_blob_client(
+        container="documents",
+        blob=f"{uuid.uuid4()}_{filename}"
+    )
+
+    blob_client.upload_blob(file.stream, overwrite=True)
+
+    return blob_client.url
+
+# ======================================
+# Connecting to existing DB(pla_documents
+# =======================================
+@app.post("/api/upload")
+def upload():
+    file = request.files.get("file")
+    nuid = request.form.get("nuid")
+    doc_type = request.form.get("document_type")
+
+    if not file:
+        return {"error": "No file"}, 400
+
+    file_url = upload_file_to_blob(file, file.filename)
+
+    conn = pyodbc.connect(os.getenv("SQL_CONNECTION_STRING"), timeout=10, autocommit=True)
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        INSERT INTO pla_documents (nuid, document_type, file_url)
+        VALUES (?, ?, ?)
+    """, nuid, doc_type, file_url)
+
+    return {"file_url": file_url}
+ 
 # ===============================
 # Chat API Endpoint
 # ===============================
