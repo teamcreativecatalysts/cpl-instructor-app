@@ -80,7 +80,7 @@ SCENARIO DETECTION APPROACH:
   Do not guess — confirm first.
  
 INTERVIEW FLOW:
-1. Ask for the student's NUID (9-digit number). If the NUID starts with a 0, that always counts as a number in the 9-digit number. Validate it is exactly 9 digits. If not, ask again.
+1. Ask for the student's NUID (9-digit number). Validate it is exactly 9 digits. If not, ask again.
 2. Ask for their full name.
 3. Ask the user which program they are enrolled in.
 4. Greet them by name and ask them to briefly describe what they are requesting CPL or PLA credit for
@@ -303,6 +303,25 @@ def api_chat():
             return jsonify({"error": err}), 500
 
         history = data.get("history") or []
+
+        # ── NUID validation (before LLM) ────────────────────────────────────
+        # If the conversation has no messages yet (first user turn), treat the
+        # message as a NUID submission and validate it server-side.
+        # Also catches cases where the LLM incorrectly accepted a bad NUID.
+        import re
+        session_meta_check = data.get("session_meta") or {}
+        nuid_confirmed = session_meta_check.get("nuid")  # set by frontend once valid
+
+        if not nuid_confirmed and not history:
+            # First message — must be a valid 9-digit NUID
+            if not re.fullmatch(r"\d{9}", user_message.strip()):
+                return jsonify({
+                    "answer": (
+                        "That doesn't look like a valid NUID. "
+                        "Please enter your 9-digit Northeastern University ID number "
+                        "(digits only, no spaces or dashes)."
+                    )
+                })
 
         # Sanitise — only keep valid role/content pairs
         safe_history = [
