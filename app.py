@@ -1,34 +1,92 @@
 import os
 import base64
 import tempfile
-from flask import Flask, render_template, request, jsonify, send_from_directory
-from openai import AzureOpenAI
 import json
 from pathlib import Path
+
 import pyodbc
+from flask import Flask, render_template, request, jsonify, send_from_directory
+from openai import AzureOpenAI
 from azure.storage.blob import BlobServiceClient
-import uuid
 
 
-# Explicit template folder for Azure App Service reliability
 app = Flask(__name__, template_folder="templates")
-
-# ADDED — loads both data files at startup:
 BASE_DIR = Path(__file__).resolve().parent
- 
+
+
+# ===============================
+# Usage Limiter
+# ===============================
+MAX_CHAT_REQUESTS = int(os.getenv("MAX_CHAT_REQUESTS", "300"))
+
+
+def ensure_usage_table():
+    conn_str = os.getenv("SQL_CONNECTION_STRING")
+    if not conn_str:
+        raise RuntimeError("Missing SQL_CONNECTION_STRING; usage limit cannot be enforced.")
+
+    conn = pyodbc.connect(conn_str, timeout=10)
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        IF OBJECT_ID('dbo.usage_counter', 'U') IS NULL
+        BEGIN
+            CREATE TABLE dbo.usage_counter (
+                id INT IDENTITY(1,1) PRIMARY KEY,
+                route NVARCHAR(100) NOT NULL DEFAULT 'api_chat',
+                created_at DATETIME DEFAULT GETDATE()
+            );
+        END
+    """)
+
+    conn.commit()
+    conn.close()
+
+
+def get_usage_count():
+    ensure_usage_table()
+
+    conn = pyodbc.connect(os.getenv("SQL_CONNECTION_STRING"), timeout=10)
+    cursor = conn.cursor()
+    cursor.execute("SELECT COUNT(*) FROM dbo.usage_counter WHERE route = 'api_chat'")
+    count = cursor.fetchone()[0]
+    conn.close()
+    return int(count)
+
+
+def increment_usage():
+    ensure_usage_table()
+
+    conn = pyodbc.connect(os.getenv("SQL_CONNECTION_STRING"), timeout=10)
+    cursor = conn.cursor()
+    cursor.execute("INSERT INTO dbo.usage_counter (route) VALUES ('api_chat')")
+    conn.commit()
+    conn.close()
+
+
+def usage_limit_reached_message():
+    return (
+        "⚠️ This demo has reached its usage limit. "
+        "Please contact the project owner if you would like continued access."
+    )
+
+
+# ===============================
+# Load Data Files
+# ===============================
 try:
     POLICY_DIGEST = (BASE_DIR / "data" / "policy_digest.md").read_text(encoding="utf-8")
 except Exception as e:
     POLICY_DIGEST = "Policy digest unavailable."
     app.logger.warning(f"Could not load policy_digest.md: {e}")
- 
+
 try:
     INTERVIEW_SCHEMA = json.loads((BASE_DIR / "data" / "interview_schema.json").read_text(encoding="utf-8"))
 except Exception as e:
     INTERVIEW_SCHEMA = {}
     app.logger.warning(f"Could not load interview_schema.json: {e}")
 
-# Build system prompt
+
 def build_system_prompt():
     return f"""
 You are a PLA (Prior Learning Assessment) intake assistant for Northeastern University College of Professional Studies.
@@ -133,7 +191,7 @@ def get_client():
 
 
 # ===============================
-# Static File Route (bulletproof)
+# Static File Route
 # ===============================
 @app.get("/static/<path:filename>")
 def static_files(filename):
@@ -156,12 +214,20 @@ def chat_page():
 
 @app.get("/admin")
 def admin_page():
+    try:
+        usage_count = get_usage_count() if os.getenv("SQL_CONNECTION_STRING") else "N/A"
+    except Exception:
+        usage_count = "Unavailable"
+
     status = {
         "AZURE_OPENAI_ENDPOINT": "✅ set" if os.getenv("AZURE_OPENAI_ENDPOINT") else "❌ missing",
         "AZURE_OPENAI_API_KEY": "✅ set" if os.getenv("AZURE_OPENAI_API_KEY") else "❌ missing",
         "AZURE_OPENAI_API_VERSION": os.getenv("AZURE_OPENAI_API_VERSION") or "(default: 2024-12-01-preview)",
         "AZURE_OPENAI_DEPLOYMENT": "✅ set" if os.getenv("AZURE_OPENAI_DEPLOYMENT") else "❌ missing",
         "SQL_CONNECTION_STRING": "✅ set" if os.getenv("SQL_CONNECTION_STRING") else "❌ missing",
+        "AZURE_STORAGE_CONNECTION_STRING": "✅ set" if os.getenv("AZURE_STORAGE_CONNECTION_STRING") else "❌ missing",
+        "MAX_CHAT_REQUESTS": MAX_CHAT_REQUESTS,
+        "CURRENT_CHAT_REQUESTS": usage_count,
     }
     return render_template("admin.html", status=status)
 
@@ -169,13 +235,15 @@ def admin_page():
 @app.get("/health")
 def health():
     return jsonify({"status": "ok"})
- 
-@app.route('/pla_information')
+
+
+@app.route("/pla_information")
 def pla_info():
-    return render_template('pla_information.html')
+    return render_template("pla_information.html")
+
 
 # ===============================
-# DEBUG ROUTE — SDK versions
+# Debug Route
 # ===============================
 @app.get("/versions")
 def versions():
@@ -192,7 +260,7 @@ def versions():
 
 
 # ===============================
-# DB CHECK ROUTE
+# DB Check Route
 # ===============================
 @app.get("/dbcheck")
 def dbcheck():
@@ -216,9 +284,7 @@ def dbcheck():
 
 
 # ===============================
-# DB Save Helper (safe — won't crash if DB not ready)
-# Upserts by nuid: one row per student session, updated on every turn.
-# Requires nuid to be a UNIQUE or PRIMARY KEY column in pla_sessions.
+# DB Save Helper
 # ===============================
 def save_session_to_db(nuid, student_name, scenario, conversation_log):
     conn_str = os.getenv("SQL_CONNECTION_STRING")
@@ -231,15 +297,13 @@ def save_session_to_db(nuid, student_name, scenario, conversation_log):
         cursor = conn.cursor()
         conversation_text = json.dumps(conversation_log)[:4000]
 
-        # Try to update an existing row first.
-        # If no row exists yet (rowcount == 0), insert a new one.
         cursor.execute(
             """
             UPDATE pla_sessions
-            SET student_name    = ?,
-                scenario        = ?,
+            SET student_name = ?,
+                scenario = ?,
                 conversation_log = ?,
-                updated_at      = GETDATE()
+                updated_at = GETDATE()
             WHERE nuid = ?
             """,
             str(student_name),
@@ -266,11 +330,15 @@ def save_session_to_db(nuid, student_name, scenario, conversation_log):
     except Exception as e:
         app.logger.exception(f"DB ERROR: {e}")
 
+
 # ===============================
 # Upload function
 # ===============================
 def upload_file_to_blob(file, filename, nuid, doc_type):
     conn_str = os.getenv("AZURE_STORAGE_CONNECTION_STRING")
+    if not conn_str:
+        raise RuntimeError("Missing AZURE_STORAGE_CONNECTION_STRING")
+
     blob_service = BlobServiceClient.from_connection_string(conn_str)
 
     blob_client = blob_service.get_blob_client(
@@ -279,15 +347,30 @@ def upload_file_to_blob(file, filename, nuid, doc_type):
     )
 
     blob_client.upload_blob(file.stream, overwrite=True)
-
     return blob_client.url
- 
+
+
 # ===============================
 # Chat API Endpoint
 # ===============================
 @app.post("/api/chat")
 def api_chat():
     try:
+        # Enforce request limit BEFORE calling Azure OpenAI
+        try:
+            current_usage = get_usage_count()
+        except Exception as e:
+            app.logger.exception("Usage limiter failed")
+            return jsonify({
+                "answer": (
+                    "⚠️ This demo is temporarily unavailable because usage tracking could not be verified. "
+                    "Please contact the project owner."
+                )
+            }), 200
+
+        if current_usage >= MAX_CHAT_REQUESTS:
+            return jsonify({"answer": usage_limit_reached_message()}), 200
+
         data = request.get_json(silent=True) or {}
         user_message = (data.get("message") or "").strip()
 
@@ -304,16 +387,11 @@ def api_chat():
 
         history = data.get("history") or []
 
-        # ── NUID validation (before LLM) ────────────────────────────────────
-        # If the conversation has no messages yet (first user turn), treat the
-        # message as a NUID submission and validate it server-side.
-        # Also catches cases where the LLM incorrectly accepted a bad NUID.
         import re
         session_meta_check = data.get("session_meta") or {}
-        nuid_confirmed = session_meta_check.get("nuid")  # set by frontend once valid
+        nuid_confirmed = session_meta_check.get("nuid")
 
         if not nuid_confirmed and not history:
-            # First message — must be a valid 9-digit NUID
             if not re.fullmatch(r"\d{9}", user_message.strip()):
                 return jsonify({
                     "answer": (
@@ -323,7 +401,6 @@ def api_chat():
                     )
                 })
 
-        # Sanitise — only keep valid role/content pairs
         safe_history = [
             {"role": h["role"], "content": h["content"]}
             for h in history
@@ -343,6 +420,9 @@ def api_chat():
         )
 
         answer = (response.choices[0].message.content or "").strip()
+
+        # Count only successful Azure OpenAI calls
+        increment_usage()
 
         session_meta = data.get("session_meta") or {}
         nuid = session_meta.get("nuid")
@@ -369,16 +449,10 @@ def api_chat():
 # Upload API Endpoint
 # ===============================
 ALLOWED_EXTENSIONS = {".pdf", ".png", ".jpg", ".jpeg", ".docx"}
-MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB
+MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 
-def _extract_text_from_upload(file_bytes: bytes, filename: str) -> tuple[str | None, str | None]:
-    """
-    Return (text_content, media_type) for the uploaded file.
-    - PDF/images: return base64 + media_type for vision-capable model.
-    - DOCX: extract plain text via python-docx (if available).
-    - Fallback: try decoding as UTF-8 text.
-    Returns (None, error_message) on failure.
-    """
+
+def _extract_text_from_upload(file_bytes: bytes, filename: str):
     ext = Path(filename).suffix.lower()
 
     if ext in (".png", ".jpg", ".jpeg"):
@@ -387,7 +461,6 @@ def _extract_text_from_upload(file_bytes: bytes, filename: str) -> tuple[str | N
         return b64, media_type
 
     if ext == ".pdf":
-        # Send as base64 PDF; GPT-4o vision can read PDFs directly
         b64 = base64.standard_b64encode(file_bytes).decode()
         return b64, "application/pdf"
 
@@ -402,12 +475,10 @@ def _extract_text_from_upload(file_bytes: bytes, filename: str) -> tuple[str | N
             text = "\n".join(p.text for p in doc.paragraphs if p.text.strip())
             return text, "text/plain"
         except ImportError:
-            # python-docx not installed — fall through to UTF-8 attempt
             pass
         except Exception as e:
             return None, f"Could not read DOCX: {e}"
 
-    # Generic: try UTF-8
     try:
         return file_bytes.decode("utf-8"), "text/plain"
     except Exception:
@@ -417,7 +488,6 @@ def _extract_text_from_upload(file_bytes: bytes, filename: str) -> tuple[str | N
 @app.post("/api/upload")
 def api_upload():
     try:
-        # ── Validate file presence ──────────────────────────────────────────
         if "file" not in request.files:
             return jsonify({"error": "No file provided"}), 400
 
@@ -426,14 +496,16 @@ def api_upload():
         ext = Path(filename).suffix.lower()
 
         if ext not in ALLOWED_EXTENSIONS:
-            return jsonify({"error": f"File type '{ext}' not supported. Allowed: {', '.join(ALLOWED_EXTENSIONS)}"}), 400
+            return jsonify({
+                "error": f"File type '{ext}' not supported. Allowed: {', '.join(ALLOWED_EXTENSIONS)}"
+            }), 400
 
         file_bytes = uploaded.read()
         uploaded.stream.seek(0)
+
         if len(file_bytes) > MAX_UPLOAD_BYTES:
             return jsonify({"error": "File exceeds 10 MB limit."}), 400
 
-        # ── Parse other form fields ─────────────────────────────────────────
         label = request.form.get("label", filename)
         history_raw = request.form.get("history", "[]")
         session_meta_raw = request.form.get("session_meta", "{}")
@@ -448,27 +520,6 @@ def api_upload():
         except Exception:
             session_meta = {}
 
-        # ── Azure OpenAI setup ──────────────────────────────────────────────
-        deployment = os.getenv("AZURE_OPENAI_DEPLOYMENT")
-        if not deployment:
-            return jsonify({"error": "Missing AZURE_OPENAI_DEPLOYMENT"}), 500
-
-        client, err = get_client()
-        if err:
-            return jsonify({"error": err}), 500
-
-        # ── Sanitise history ────────────────────────────────────────────────
-        safe_history = [
-            {"role": h["role"], "content": h["content"]}
-            for h in history
-            if isinstance(h, dict)
-            and h.get("role") in ("user", "assistant")
-            and isinstance(h.get("content"), str)
-        ]
-        
-        # ===============================
-        # Save file to Blob + SQL
-        # ===============================
         nuid = session_meta.get("nuid")
 
         if nuid:
@@ -481,15 +532,15 @@ def api_upload():
 
             conn = pyodbc.connect(os.getenv("SQL_CONNECTION_STRING"), timeout=10, autocommit=True)
             cursor = conn.cursor()
-
-            cursor.execute("""
+            cursor.execute(
+                """
                 INSERT INTO pla_documents (nuid, document_type, file_url)
                 VALUES (?, ?, ?)
-            """, nuid, label, file_url)
-
-        # ── Persist session ─────────────────────────
-        student_name = session_meta.get("student_name")
-        scenario = session_meta.get("scenario")
+                """,
+                nuid,
+                label,
+                file_url,
+            )
 
         return jsonify({
             "answer": f"Upload successful for {label}. Let's continue."
